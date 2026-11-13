@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Juegos de clase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#fff; --ink:#000; --muted:#52525b; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#09090b; --ink:#fff; --muted:#a1a1aa; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; }
+  main { max-width:960px; margin:0 auto; padding:48px 20px 64px; }
+  h1 { font-size:clamp(2.4rem,8vw,4.5rem); font-weight:800; line-height:1; margin:0 0 12px; letter-spacing:-.02em; }
+  .sub { color:var(--muted); font-size:1.1rem; margin:0 0 28px; max-width:46ch; }
+  .bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:0 0 32px; }
+  .bar label { font-weight:800; }
+  .bar input { font:inherit; padding:8px 12px; border:3px solid var(--ink); background:var(--bg); color:var(--ink); width:210px; }
+  .bar input:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  .status { margin-left:auto; font-size:.9rem; color:var(--muted); }
+  .warn { border:3px solid var(--ink); background:#fde047; color:#000; padding:12px 16px; margin:0 0 28px; font-weight:500; }
+  .grid { display:grid; gap:24px; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
+  .card { display:flex; flex-direction:column; gap:10px; min-height:210px; padding:20px; background:var(--c); color:#000;
+          border:3px solid var(--ink); box-shadow:6px 6px 0 var(--ink); text-decoration:none; transition:transform .12s, box-shadow .12s; }
+  a.card:hover, a.card:focus-visible { transform:translate(3px,3px); box-shadow:3px 3px 0 var(--ink); }
+  a.card:focus-visible { outline:3px solid var(--ink); outline-offset:4px; }
+  .emoji { font-size:2.6rem; line-height:1; }
+  .card h2 { margin:0; font-size:1.5rem; font-weight:800; }
+  .card p { margin:0; flex:1; font-weight:500; }
+  .go { font-weight:800; background:#000; color:#fff; padding:6px 14px; align-self:flex-start; }
+  .soon { filter:grayscale(1); opacity:.55; box-shadow:none; border-style:dashed; }
+  .soon .go { background:transparent; color:#000; border:2px solid #000; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Juegos de clase</h1>
+  <p class="sub">Elige un juego. Los estudiantes entran desde este mismo enlace.</p>
+  <div id="warn"></div>
+  <div class="bar">
+    <label for="room">Sala</label>
+    <input id="room" placeholder="ROOM-1001 (por defecto)" autocomplete="off" maxlength="40">
+    <span class="status" id="status" role="status">Lista local</span>
+  </div>
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+  // 1) Built-in catalog: the menu always works, even offline or without the database.
+  var CATALOG = [
+    { id:'stop', title:'STOP!', description:'Scattergories de vocabulario en inglés y francés.', emoji:'🛑', color:'#fb7185', path:'stop.html', enabled:true,  sort_order:10 },
+    { id:'ttl',  title:'Two Truths and a Lie', description:'Escribe dos verdades y una mentira; el grupo adivina.', emoji:'🤥', color:'#38bdf8', path:'ttl.html', enabled:false, sort_order:20 }
+  ];
+  var games = CATALOG.slice();
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+  function render() {
+    var room = document.getElementById('room').value.trim();
+    var q = room ? '?room=' + encodeURIComponent(room) : '';
+    document.getElementById('grid').innerHTML = games.map(function (g) {
+      var inner = '<span class="emoji">' + esc(g.emoji) + '</span><h2>' + esc(g.title) + '</h2><p>' + esc(g.description) + '</p>';
+      return g.enabled
+        ? '<a class="card" style="--c:' + esc(g.color) + '" href="' + esc(g.path) + q + '">' + inner + '<span class="go">Jugar</span></a>'
+        : '<div class="card soon" style="--c:' + esc(g.color) + '">' + inner + '<span class="go">Próximamente</span></div>';
+    }).join('');
+  }
+  document.getElementById('room').addEventListener('input', render);
+  render();
+
+  if (location.protocol === 'file:') {
+    document.getElementById('warn').innerHTML = '<p class="warn">Abriste el archivo directamente desde tu computador. El menú funciona, pero los juegos necesitan un servidor: ábrelo desde GitHub Pages o con <code>python -m http.server</code> dentro de esta carpeta.</p>';
+  }
+</script>
+<script type="module">
+  // 2) Optional: sync the list with the database (new games appear without editing this page).
+  var status = document.getElementById('status');
+  try {
+    var mod = await Promise.race([
+      import('./supabase.js'),
+      new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, 6000); })
+    ]);
+    var res = await Promise.race([
+      mod.supabase.from('hub_games').select('*').order('sort_order'),
+      new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, 6000); })
+    ]);
+    if (res.error) throw res.error;
+    if (res.data && res.data.length) {
+      games = res.data;
+      render();
+      status.textContent = '● Conectado a la base de datos';
+    } else {
+      status.textContent = 'Base de datos vacía: ejecuta 01_hub_schema.sql';
+    }
+  } catch (e) {
+    console.warn('Hub database unavailable:', e);
+    status.textContent = '○ Sin base de datos (' + (e && e.message ? e.message : 'error') + '). Usando lista local.';
+  }
+</script>
+</body>
+</html>
