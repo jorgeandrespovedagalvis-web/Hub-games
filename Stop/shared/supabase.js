@@ -1,8 +1,8 @@
 // One Supabase client + small helpers shared by every game.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-export const SUPABASE_URL = "https://xzhznwpgbovjlnpguopb.supabase.co";
-export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6aHpud3BnYm92amxucGd1b3BiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI4NTM3NTYsImV4cCI6MjEwODQyOTc1Nn0.zgJ336e1MflSXsjC9yxhUPhwbVMeCjgJi2pYBwGe3Nw";
+export const SUPABASE_URL = https: "//grjanxtsqtwbjptyxmaq.supabase.co";
+export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdyamFueHRzcXR3YmpwdHl4bWFxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ1OTQ5NDYsImV4cCI6MjExMDE3MDk0Nn0.wdnVL53oedFQ_eRGyd6tj0AFq17Oi1VnTsBz38t-Q24";
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const roomCodeFromUrl = (fallback) =>
