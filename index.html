@@ -8,36 +8,52 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#fff; --ink:#000; --muted:#52525b; color-scheme: light dark; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#09090b; --ink:#fff; --muted:#a1a1aa; } }
+  /* Paleta: cambia solo estas líneas para recolorear toda la página */
+  :root { --bg:#000000; --fg:#ffffff; --red:#d42a1a; --red-l:#ff6b5b; --gray:#5b6063; --dark:#1c1c1c; --shadow:#3a3d3f; --muted:#b8bcbf; color-scheme: dark; }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; }
-  main { max-width:960px; margin:0 auto; padding:48px 20px 64px; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; }
+  header { background:var(--gray); color:#fff; border-bottom:8px solid var(--red); }
+  .wrap { max-width:960px; margin:0 auto; padding-left:20px; padding-right:20px; }
+  header .wrap { padding-top:44px; padding-bottom:34px; }
+  .kicker { display:inline-block; background:var(--red); color:#fff; font-weight:800; font-size:.8rem; letter-spacing:.1em; text-transform:uppercase; padding:3px 10px; margin-bottom:16px; }
   h1 { font-size:clamp(2.4rem,8vw,4.5rem); font-weight:800; line-height:1; margin:0 0 12px; letter-spacing:-.02em; }
-  .sub { color:var(--muted); font-size:1.1rem; margin:0 0 28px; max-width:46ch; }
+  .sub { color:#f1f1f1; font-size:1.1rem; margin:0; max-width:46ch; }
+  main.wrap { padding-top:32px; padding-bottom:56px; }
   .bar { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:0 0 32px; }
-  .bar label { font-weight:800; }
-  .bar input { font:inherit; padding:8px 12px; border:3px solid var(--ink); background:var(--bg); color:var(--ink); width:210px; }
-  .bar input:focus-visible { outline:3px solid var(--ink); outline-offset:2px; }
+  .bar label { font-weight:800; color:var(--red-l); text-transform:uppercase; letter-spacing:.06em; }
+  .bar input { font:inherit; padding:8px 12px; border:3px solid #fff; background:var(--dark); color:#fff; width:210px; }
+  .bar input::placeholder { color:var(--muted); }
+  .bar input:focus-visible { outline:3px solid var(--red-l); outline-offset:2px; }
   .status { margin-left:auto; font-size:.9rem; color:var(--muted); }
-  .warn { border:3px solid var(--ink); background:#fde047; color:#000; padding:12px 16px; margin:0 0 28px; font-weight:500; }
+  .warn { border:3px solid #fff; border-left:12px solid var(--red); background:var(--dark); padding:12px 16px; margin:0 0 28px; font-weight:500; }
   .grid { display:grid; gap:24px; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); }
-  .card { display:flex; flex-direction:column; gap:10px; min-height:210px; padding:20px; background:var(--c); color:#000;
-          border:3px solid var(--ink); box-shadow:6px 6px 0 var(--ink); text-decoration:none; transition:transform .12s, box-shadow .12s; }
-  a.card:hover, a.card:focus-visible { transform:translate(3px,3px); box-shadow:3px 3px 0 var(--ink); }
-  a.card:focus-visible { outline:3px solid var(--ink); outline-offset:4px; }
+  .card { display:flex; flex-direction:column; gap:10px; min-height:210px; padding:20px; border:3px solid #fff;
+          box-shadow:6px 6px 0 var(--shadow); text-decoration:none; color:#fff; transition:transform .12s, box-shadow .12s; }
+  .card.c0 { background:var(--red); }
+  .card.c1 { background:var(--gray); }
+  .card.c2 { background:var(--dark); }
+  a.card:hover, a.card:focus-visible { transform:translate(3px,3px); box-shadow:3px 3px 0 var(--shadow); }
+  a.card:focus-visible { outline:3px solid var(--red-l); outline-offset:4px; }
   .emoji { font-size:2.6rem; line-height:1; }
   .card h2 { margin:0; font-size:1.5rem; font-weight:800; }
   .card p { margin:0; flex:1; font-weight:500; }
-  .go { font-weight:800; background:#000; color:#fff; padding:6px 14px; align-self:flex-start; }
-  .soon { filter:grayscale(1); opacity:.55; box-shadow:none; border-style:dashed; }
-  .soon .go { background:transparent; color:#000; border:2px solid #000; }
+  .go { font-weight:800; padding:6px 14px; align-self:flex-start; border:2px solid #fff; background:var(--red); color:#fff; }
+  .c0 .go { background:var(--bg); }
+  .soon { filter:grayscale(1); opacity:.5; box-shadow:none !important; border-style:dashed; }
+  .soon .go { background:transparent; color:inherit; border:2px solid currentColor; }
+  footer { border-top:4px solid var(--gray); padding:14px 0 28px; color:var(--muted); font-size:.9rem; }
+  footer b { color:var(--red-l); }
 </style>
 </head>
 <body>
-<main>
-  <h1>Juegos de clase</h1>
-  <p class="sub">Elige un juego. Los estudiantes entran desde este mismo enlace.</p>
+<header>
+  <div class="wrap">
+    <span class="kicker">Material de clase</span>
+    <h1>Juegos de clase</h1>
+    <p class="sub">Elige un juego. Los estudiantes entran desde este mismo enlace.</p>
+  </div>
+</header>
+<main class="wrap">
   <div id="warn"></div>
   <div class="bar">
     <label for="room">Sala</label>
@@ -46,11 +62,12 @@
   </div>
   <div class="grid" id="grid"></div>
 </main>
+<footer><div class="wrap"><b>●</b> Página madre del material de clase. Aquí se irán sumando los nuevos juegos.</div></footer>
 <script>
   // 1) Built-in catalog: the menu always works, even offline or without the database.
   var CATALOG = [
     { id:'stop', title:'STOP!', description:'Scattergories de vocabulario en inglés y francés.', emoji:'🛑', color:'#fb7185', path:'stop.html', enabled:true,  sort_order:10 },
-    { id:'ttl',  title:'Two Truths and a Lie', description:'Escribe dos verdades y una mentira; el grupo adivina.', emoji:'🤥', color:'#38bdf8', path:'ttl.html', enabled:false, sort_order:20 }
+    { id:'ttl',  title:'Two Truths and a Lie', description:'Escribe dos verdades y una mentira; el grupo adivina.', emoji:'🤥', color:'#38bdf8', path:'ttl.html', enabled:true,  sort_order:20 }
   ];
   var games = CATALOG.slice();
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
@@ -58,11 +75,12 @@
   function render() {
     var room = document.getElementById('room').value.trim();
     var q = room ? '?room=' + encodeURIComponent(room) : '';
-    document.getElementById('grid').innerHTML = games.map(function (g) {
+    document.getElementById('grid').innerHTML = games.map(function (g, i) {
+      var c = 'c' + (i % 3);
       var inner = '<span class="emoji">' + esc(g.emoji) + '</span><h2>' + esc(g.title) + '</h2><p>' + esc(g.description) + '</p>';
       return g.enabled
-        ? '<a class="card" style="--c:' + esc(g.color) + '" href="' + esc(g.path) + q + '">' + inner + '<span class="go">Jugar</span></a>'
-        : '<div class="card soon" style="--c:' + esc(g.color) + '">' + inner + '<span class="go">Próximamente</span></div>';
+        ? '<a class="card ' + c + '" href="' + esc(g.path) + q + '">' + inner + '<span class="go">Jugar</span></a>'
+        : '<div class="card soon ' + c + '">' + inner + '<span class="go">Próximamente</span></div>';
     }).join('');
   }
   document.getElementById('room').addEventListener('input', render);
@@ -90,7 +108,7 @@
       render();
       status.textContent = '● Conectado a la base de datos';
     } else {
-      status.textContent = 'Base de datos vacía: ejecuta 01_hub_schema.sql';
+      status.textContent = 'Base de datos vacía: ejecuta setup_database.sql';
     }
   } catch (e) {
     console.warn('Hub database unavailable:', e);
