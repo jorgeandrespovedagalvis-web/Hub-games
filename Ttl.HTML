@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Two Truths and a Lie</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#fff; --ink:#000; --muted:#52525b; --sky:#38bdf8; --ok:#86efac; --bad:#fca5a5; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#09090b; --ink:#fff; --muted:#a1a1aa; } }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; }
+  main { max-width:760px; margin:0 auto; padding:56px 18px 90px; }
+  h1 { font-size:clamp(1.8rem,6vw,2.8rem); font-weight:800; margin:0 0 6px; line-height:1.05; }
+  h2 { font-size:1.3rem; margin:0 0 10px; }
+  .back { position:fixed; top:10px; left:10px; font:800 12px system-ui; background:#000; color:#fff; padding:5px 12px; border-radius:99px; text-decoration:none; z-index:5; }
+  .box { border:3px solid var(--ink); box-shadow:6px 6px 0 var(--ink); background:var(--bg); padding:18px; margin:18px 0; }
+  .muted { color:var(--muted); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { border:2px solid var(--ink); padding:3px 10px; font-weight:800; background:var(--sky); color:#000; }
+  button, input, textarea { font:inherit; color:inherit; }
+  button { cursor:pointer; border:3px solid var(--ink); background:#000; color:#fff; font-weight:800; padding:10px 18px; }
+  @media (prefers-color-scheme: dark) { button.main { background:#fff; color:#000; } }
+  button.main:disabled { opacity:.35; cursor:not-allowed; }
+  button.ghost { background:transparent; color:var(--ink); }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline:3px solid var(--sky); outline-offset:2px; }
+  input[type=text], input[type=number], textarea { width:100%; padding:10px; border:3px solid var(--ink); background:var(--bg); }
+  .avs { display:grid; grid-template-columns:repeat(8,1fr); gap:6px; margin:10px 0 16px; }
+  .av { font-size:1.6rem; padding:4px; background:transparent; border:3px solid transparent; color:inherit; }
+  .av.on { border-color:var(--ink); background:var(--sky); }
+  .row { display:flex; gap:10px; align-items:center; margin:10px 0; flex-wrap:wrap; }
+  .line { display:flex; gap:10px; align-items:flex-start; margin:10px 0; }
+  .line input[type=radio] { margin-top:14px; width:20px; height:20px; accent-color:#000; }
+  .opts { list-style:none; padding:0; margin:0; }
+  .opt, .opts li { display:flex; gap:12px; width:100%; text-align:left; margin:10px 0; padding:14px; font-size:1.1rem; border:3px solid var(--ink); background:var(--bg); color:var(--ink); }
+  .opt.sel { background:var(--sky); color:#000; }
+  .opts li.lie { background:var(--bad); color:#000; } .opts li.truth { background:var(--ok); color:#000; }
+  .timer { font-size:2.4rem; font-weight:800; font-variant-numeric:tabular-nums; }
+  .big { font-size:1.5rem; font-weight:800; }
+  .rank { display:flex; gap:12px; padding:10px 0; border-bottom:2px solid var(--ink); font-weight:800; font-size:1.2rem; }
+  .rank.me { background:var(--sky); color:#000; padding-left:8px; }
+  .rank .s { margin-left:auto; }
+  #err { position:fixed; left:0; right:0; bottom:0; background:#fde047; color:#000; padding:10px 16px; font-weight:500; display:none; z-index:9; }
+</style>
+</head>
+<body>
+<a class="back" href="./">← Juegos</a>
+<main><h1>Two Truths and a Lie</h1><div id="app"><p class="muted">Cargando…</p></div></main>
+<div id="err" role="alert"></div>
+<script type="module">
+import { supabase, ensureRoom, joinRoom, subscribeRoom, patchRoom, roomCodeFromUrl } from "./supabase.js";
+
+const CODE = roomCodeFromUrl("TTL-1001");
+const AV = ["🦊","🐼","🐸","🦄","🐙","🦁","🐯","🐵","🐧","🦉","🐢","🐳","🦋","🐝","🦖","👾"];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LET = 'ABC';
+
+let sid; try { sid = localStorage.getItem('ttl_sid'); if (!sid) { sid = crypto.randomUUID(); localStorage.setItem('ttl_sid', sid); } } catch { sid = crypto.randomUUID(); }
+let hostMode = false;
+try { hostMode = localStorage.getItem('ttl_host_' + CODE) === '1' || new URLSearchParams(location.search).get('host') === '1'; } catch {}
+let S = { room:null, players:[], items:[], votes:[] }, me = null, skew = 0, lastKey = '', pickedAv = AV[0];
+
+function showError(e) {
+  const t = $('#err'); if (!e) { t.style.display = 'none'; return; }
+  const m = (e.message || String(e));
+  t.textContent = (/hub_|relation|schema|42P01|42501|PGRST/.test(m + (e.code||'')) ? 'Falta la base de datos: ejecuta setup_database.sql y habilita el juego. ' : '') + m;
+  t.style.display = 'block';
+}
+
+async function refresh() {
+  const [r, p, i, v] = await Promise.all([
+    supabase.from('hub_rooms').select('*').eq('code', CODE).maybeSingle(),
+    supabase.from('hub_players').select('*').eq('room_code', CODE).order('joined_at'),
+    supabase.from('hub_items').select('*').eq('room_code', CODE).eq('kind', 'statement'),
+    supabase.from('hub_votes').select('*').eq('room_code', CODE)
+  ]);
+  const err = r.error || p.error || i.error || v.error;
+  if (err) { showError(err); return; }
+  showError(null);
+  S = { room: r.data, players: p.data || [], items: i.data || [], votes: v.data || [] };
+  me = S.players.find(x => x.session_id === sid) || null;
+  render();
+}
+let deb; const soon = () => { clearTimeout(deb); deb = setTimeout(refresh, 150); };
+
+const st = () => (S.room && S.room.state) || {};
+const curItem = () => S.items.find(i => i.id === st().current_item_id);
+const byId = id => S.players.find(p => p.id === id);
+const pTag = p => p ? `${esc(p.avatar || '🙂')} ${esc(p.name)}` : '?';
+const remaining = () => { const e = st().ends_at; return e ? Math.max(0, Math.ceil((new Date(e).getTime() - (Date.now() + skew)) / 1000)) : 0; };
+const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+const votesFor = id => S.votes.filter(v => v.item_id === id);
+const eligible = it => S.players.filter(p => p.id !== it.player_id).length;
+
+function countText() {
+  const s = S.room.status;
+  if (s === 'writing') return `${S.items.length}/${S.players.length} enviaron`;
+  const it = curItem(); return it ? `${votesFor(it.id).length}/${eligible(it)} votaron` : '';
+}
+function viewKey() {
+  if (!S.room) return 'none';
+  const s = st(), it = curItem();
+  const mv = me && it ? votesFor(it.id).find(v => v.voter_id === me.id) : null;
+  const sub = me ? S.items.some(i => i.player_id === me.id) : false;
+  const sc = ['reveal', 'podium'].includes(S.room.status) ? S.players.reduce((a, p) => a + p.score, 0) : '';
+  return [S.room.status, hostMode, me && me.id, s.current_item_id, mv && mv.data.guess, sub, s.idx, sc].join('|');
+}
+function render() {
+  if (!S.room) { $('#app').innerHTML = '<p class="muted">No se pudo abrir la sala.</p>'; return; }
+  const k = viewKey();
+  if (k !== lastKey) { lastKey = k; $('#app').innerHTML = view(); }
+  light();
+}
+function light() {
+  const pl = $('#plist'); if (pl) pl.innerHTML = S.players.map(p => `<span class="chip">${pTag(p)}</span>`).join('') || '<i class="muted">Aún nadie…</i>';
+  const c = $('#count'); if (c) c.textContent = countText();
+  const sw = $('#startwrite'); if (sw) sw.disabled = S.players.length < 2;
+  const sv = $('#startvote'); if (sv) sv.disabled = S.items.length < 2;
+  tick();
+}
+function tick() { const t = $('#timer'); if (t) t.textContent = fmt(remaining()); }
+setInterval(tick, 500);
+
+function view() {
+  const s = S.room.status;
+  if (hostMode) return hostView(s);
+  if (!me) return joinView();
+  return playerView(s);
+}
+
+function joinView() {
+  return `<div class="box"><h2>Entrar a la sala <code>${esc(CODE)}</code></h2>
+    <label for="nm"><b>Tu nombre</b></label><input id="nm" type="text" maxlength="30" autocomplete="off">
+    <p><b>Tu avatar</b></p><div class="avs">${AV.map(a => `<button type="button" class="av ${a === pickedAv ? 'on' : ''}" data-av="${a}" aria-label="Avatar ${a}">${a}</button>`).join('')}</div>
+    <button class="main" data-act="join">Entrar</button></div>
+    <p><button class="ghost" data-act="host">Soy el anfitrión (proyector)</button></p>`;
+}
+
+function hostView(s) {
+  const link = location.origin + location.pathname + '?room=' + encodeURIComponent(CODE);
+  const it = curItem();
+  if (s === 'lobby') return `<div class="box"><h2>Sala <code>${esc(CODE)}</code></h2>
+    <p class="muted">Los estudiantes entran en:<br><b>${esc(link)}</b></p><div class="chips" id="plist"></div></div>
+    <div class="row"><label for="secs"><b>Segundos para escribir</b></label><input id="secs" type="number" min="30" max="900" value="120" style="width:110px">
+    <button class="main" id="startwrite" data-act="startwrite" disabled>Empezar escritura</button></div>
+    <p class="muted">Se necesitan al menos 2 jugadores.</p>`;
+  if (s === 'writing') return `<div class="box"><h2>Escribiendo…</h2><div class="timer" id="timer"></div><p class="big" id="count"></p></div>
+    <button class="main" id="startvote" data-act="startvote" disabled>Empezar votación</button>
+    <p class="muted">Se necesitan al menos 2 frases enviadas.</p>`;
+  if (s === 'voting' && it) return `<div class="box"><p class="muted">Frase ${st().idx + 1} de ${st().order.length} · de ${pTag(byId(it.player_id))}</p>
+    <ul class="opts">${it.data.lines.map((l, i) => `<li><b>${LET[i]}</b> ${esc(l)}</li>`).join('')}</ul>
+    <p class="big" id="count"></p></div><button class="main" data-act="reveal">Revelar la mentira</button>`;
+  if (s === 'reveal' && it) return `<div class="box"><p class="muted">De ${pTag(byId(it.player_id))}</p>${revealList(it)}${resultList(it)}</div>
+    <button class="main" data-act="next">${st().idx + 1 >= st().order.length ? 'Ver podio' : 'Siguiente frase'}</button>`;
+  if (s === 'podium') return `<div class="box"><h2>🏆 Podio</h2>${ranking()}</div><button class="main" data-act="reset">Nueva partida</button>`;
+  return '<p class="muted">Esperando…</p>';
+}
+
+function revealList(it) {
+  return `<ul class="opts">${it.data.lines.map((l, i) => `<li class="${i === it.data.lie_index ? 'lie' : 'truth'}"><b>${LET[i]}</b> ${esc(l)} ${i === it.data.lie_index ? '— <em>LA MENTIRA</em>' : '✓'}</li>`).join('')}</ul>`;
+}
+function resultList(it) {
+  const vs = votesFor(it.id);
+  if (!vs.length) return '<p class="muted">Nadie votó.</p>';
+  return `<div class="chips">${vs.map(v => `<span class="chip" style="background:${v.data.guess === it.data.lie_index ? 'var(--ok)' : 'var(--bad)'}">${pTag(byId(v.voter_id))} ${v.data.guess === it.data.lie_index ? '✓' : '✗'}</span>`).join('')}</div>`;
+}
+function ranking() {
+  return [...S.players].sort((a, b) => b.score - a.score).map((p, i) =>
+    `<div class="rank ${me && p.id === me.id ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span><span>${pTag(p)}</span><span class="s">${p.score}</span></div>`).join('');
+}
+
+function playerView(s) {
+  const it = curItem(), mine = it && it.player_id === me.id;
+  const hello = `<p class="muted">Juegas como ${pTag(me)}</p>`;
+  if (s === 'lobby') return `${hello}<div class="box"><h2>Estás dentro 🎉</h2><p>Espera a que empiece el juego.</p><div class="chips" id="plist"></div></div>`;
+  if (s === 'writing') {
+    if (S.items.some(i => i.player_id === me.id)) return `${hello}<div class="box"><h2>Enviado ✓</h2><p>Espera a los demás.</p><div class="timer" id="timer"></div></div>`;
+    return `${hello}<div class="box"><div class="timer" id="timer"></div><h2>Escribe 2 verdades y 1 mentira</h2>
+      <p class="muted">Marca con el círculo cuál es la mentira.</p>
+      ${[0, 1, 2].map(i => `<div class="line"><input type="radio" name="lie" value="${i}" aria-label="Marcar frase ${i + 1} como mentira"><input id="l${i}" type="text" maxlength="140" placeholder="Frase ${i + 1}" autocomplete="off"></div>`).join('')}
+      <button class="main" data-act="submit">Enviar</button></div>`;
+  }
+  if (s === 'voting' && it) {
+    if (mine) return `${hello}<div class="box"><h2>Es tu frase 😏</h2><p>Los demás están votando. ¡Cara de póker!</p><p class="big" id="count"></p></div>`;
+    const mv = votesFor(it.id).find(v => v.voter_id === me.id);
+    return `${hello}<div class="box"><p class="muted">De ${pTag(byId(it.player_id))} · ¿cuál es la mentira?</p>
+      ${it.data.lines.map((l, i) => `<button class="opt ${mv && mv.data.guess === i ? 'sel' : ''}" data-guess="${i}"><b>${LET[i]}</b> ${esc(l)}</button>`).join('')}
+      <p class="muted">${mv ? 'Voto enviado. Puedes cambiarlo hasta que se revele.' : 'Toca una opción.'}</p></div>`;
+  }
+  if (s === 'reveal' && it) {
+    const mv = votesFor(it.id).find(v => v.voter_id === me.id);
+    const wrong = votesFor(it.id).filter(v => v.data.guess !== it.data.lie_index).length;
+    const msg = mine ? `Engañaste a ${wrong} persona(s): +${wrong * 50}` : !mv ? 'No votaste en esta frase' : mv.data.guess === it.data.lie_index ? '¡Acertaste! +100' : 'Te engañaron 😅';
+    return `${hello}<div class="box"><p class="big">${msg}</p>${revealList(it)}</div>`;
+  }
+  if (s === 'podium') return `${hello}<div class="box"><h2>🏆 Podio</h2>${ranking()}</div>`;
+  return `${hello}<p class="muted">Esperando…</p>`;
+}
+
+// ---- actions ----
+async function doReveal() {
+  await refresh();
+  const it = curItem(); if (!it) return;
+  const done = st().scored || [];
+  if (!done.includes(it.id)) {
+    const lie = it.data.lie_index, add = {}; let wrong = 0;
+    votesFor(it.id).forEach(v => { if (v.data.guess === lie) add[v.voter_id] = (add[v.voter_id] || 0) + 100; else wrong++; });
+    if (wrong) add[it.player_id] = (add[it.player_id] || 0) + 50 * wrong;
+    const res = await Promise.all(Object.entries(add).map(([id, pts]) =>
+      supabase.from('hub_players').update({ score: (byId(id)?.score || 0) + pts }).eq('id', id)));
+    const bad = res.find(r => r.error); if (bad) { showError(bad.error); return; }
+    await patchRoom(CODE, { status: 'reveal', scored: [...done, it.id] });
+  } else await patchRoom(CODE, { status: 'reveal' });
+  refresh();
+}
+const actions = {
+  host() { try { localStorage.setItem('ttl_host_' + CODE, '1'); } catch {} hostMode = true; lastKey = ''; render(); },
+  async join() {
+    const name = $('#nm').value.trim(); if (!name) { $('#nm').focus(); return; }
+    const { error } = await joinRoom(CODE, sid, name, { avatar: pickedAv, status: 'joined' });
+    if (error) return showError(error);
+    refresh();
+  },
+  async startwrite() {
+    const secs = Math.min(900, Math.max(30, parseInt($('#secs').value, 10) || 120));
+    await supabase.from('hub_items').delete().eq('room_code', CODE);
+    const { error } = await supabase.rpc('hub_start_phase', { p_code: CODE, p_status: 'writing', p_secs: secs, p_reset: { current_item_id: null, order: [], idx: 0, scored: [] } });
+    if (error) showError(error); refresh();
+  },
+  async submit() {
+    const lines = [0, 1, 2].map(i => $('#l' + i).value.trim());
+    const lie = document.querySelector('input[name=lie]:checked');
+    if (lines.some(l => !l) || !lie) return showError({ message: 'Escribe las 3 frases y marca cuál es la mentira.' });
+    if (st().ends_at && remaining() <= 0) return showError({ message: 'Se acabó el tiempo.' });
+    await supabase.from('hub_items').delete().eq('room_code', CODE).eq('player_id', me.id).eq('kind', 'statement');
+    const { error } = await supabase.from('hub_items').insert([{ room_code: CODE, player_id: me.id, kind: 'statement', data: { lines, lie_index: +lie.value } }]);
+    if (error) showError(error); refresh();
+  },
+  async startvote() {
+    const order = S.items.map(i => i.id).sort(() => Math.random() - .5);
+    await patchRoom(CODE, { status: 'voting', order, idx: 0, current_item_id: order[0], scored: [] }); refresh();
+  },
+  reveal: doReveal,
+  async next() {
+    const idx = st().idx + 1, order = st().order;
+    await patchRoom(CODE, idx >= order.length ? { status: 'podium' } : { status: 'voting', idx, current_item_id: order[idx] }); refresh();
+  },
+  async reset() {
+    if (!confirm('¿Borrar frases y puntajes y volver al lobby?')) return;
+    await supabase.from('hub_items').delete().eq('room_code', CODE);
+    await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
+    await patchRoom(CODE, { status: 'lobby', order: [], idx: 0, current_item_id: null, scored: [], ends_at: null }); refresh();
+  }
+};
+document.addEventListener('click', async e => {
+  const av = e.target.closest('[data-av]');
+  if (av) { pickedAv = av.dataset.av; document.querySelectorAll('.av').forEach(b => b.classList.toggle('on', b === av)); return; }
+  const g = e.target.closest('[data-guess]');
+  if (g && me) {
+    const it = curItem(); if (!it || S.room.status !== 'voting') return;
+    const { error } = await supabase.from('hub_votes').upsert([{ room_code: CODE, item_id: it.id, voter_id: me.id, data: { guess: +g.dataset.guess } }], { onConflict: 'item_id,voter_id' });
+    if (error) showError(error); refresh(); return;
+  }
+  const a = e.target.closest('[data-act]');
+  if (a && actions[a.dataset.act]) { a.disabled = true; try { await actions[a.dataset.act](); } finally { a.disabled = false; } }
+});
+
+// ---- start ----
+try {
+  const t0 = Date.now(); const { data } = await supabase.rpc('hub_now');
+  if (data) skew = new Date(data).getTime() - (t0 + Date.now()) / 2;
+} catch {}
+await ensureRoom(CODE, 'ttl', 'lobby', {});
+await refresh();
+subscribeRoom(CODE, { rooms: soon, players: soon, items: soon, votes: soon });
+setInterval(refresh, 4000);
+</script>
+</body>
+</html>
