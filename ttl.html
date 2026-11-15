@@ -6,10 +6,20 @@
 <title>Two Truths and a Lie</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#fff; --ink:#000; --muted:#52525b; --sky:#38bdf8; --ok:#86efac; --bad:#fca5a5; color-scheme: light dark; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#09090b; --ink:#fff; --muted:#a1a1aa; } }
+  :root { --bg:#fff; --ink:#000; --muted:#3f3f46; --sky:#38bdf8; --ok:#86efac; --bad:#fca5a5; color-scheme: light dark; }
+  body{--b1:#bae6fd;--b2:#c4b5fd;--b3:#fde68a}
+  body[data-phase=writing]{--b1:#fde68a;--b2:#fdba74;--b3:#a7f3d0}
+  body[data-phase=voting]{--b1:#fbcfe8;--b2:#c4b5fd;--b3:#bae6fd}
+  body[data-phase=reveal]{--b1:#bbf7d0;--b2:#fde68a;--b3:#fbcfe8}
+  body[data-phase=podium]{--b1:#fed7aa;--b2:#fde047;--b3:#fda4af}
+  @media (prefers-color-scheme: dark) { :root { --bg:#09090b; --ink:#fff; --muted:#d4d4d8; }
+    body{--b1:#0c4a6e;--b2:#4c1d95;--b3:#713f12}
+    body[data-phase=writing]{--b1:#713f12;--b2:#7c2d12;--b3:#14532d}
+    body[data-phase=voting]{--b1:#831843;--b2:#4c1d95;--b3:#0c4a6e}
+    body[data-phase=reveal]{--b1:#14532d;--b2:#713f12;--b3:#831843}
+    body[data-phase=podium]{--b1:#7c2d12;--b2:#854d0e;--b3:#881337} }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; }
+  body { margin:0; min-height:100vh; background:radial-gradient(circle at 10% 15%, var(--b2) 0 110px, transparent 111px), radial-gradient(circle at 92% 75%, var(--b3) 0 160px, transparent 161px), radial-gradient(circle at 70% 8%, var(--b3) 0 60px, transparent 61px), var(--b1); background-attachment:fixed; color:var(--ink); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; }
   main { max-width:760px; margin:0 auto; padding:56px 18px 90px; }
   h1 { font-size:clamp(1.8rem,6vw,2.8rem); font-weight:800; margin:0 0 6px; line-height:1.05; }
   h2 { font-size:1.3rem; margin:0 0 10px; }
@@ -40,6 +50,7 @@
   .rank { display:flex; gap:12px; padding:10px 0; border-bottom:2px solid var(--ink); font-weight:800; font-size:1.2rem; }
   .rank.me { background:var(--sky); color:#000; padding-left:8px; }
   .rank .s { margin-left:auto; }
+  .qr { display:inline-block; background:#fff; padding:12px; border:3px solid #000; margin:6px 0; }
   #err { position:fixed; left:0; right:0; bottom:0; background:#fde047; color:#000; padding:10px 16px; font-weight:500; display:none; z-index:9; }
 </style>
 </head>
@@ -47,6 +58,7 @@
 <a class="back" href="./">← Juegos</a>
 <main><h1>Two Truths and a Lie</h1><div id="app"><p class="muted">Cargando…</p></div></main>
 <div id="err" role="alert"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import { supabase, ensureRoom, joinRoom, subscribeRoom, patchRoom, roomCodeFromUrl } from "./supabase.js";
 
@@ -109,7 +121,8 @@ function viewKey() {
 function render() {
   if (!S.room) { $('#app').innerHTML = '<p class="muted">No se pudo abrir la sala.</p>'; return; }
   const k = viewKey();
-  if (k !== lastKey) { lastKey = k; $('#app').innerHTML = view(); }
+  document.body.dataset.phase = S.room.status;
+  if (k !== lastKey) { lastKey = k; $('#app').innerHTML = view(); qr(); }
   light();
 }
 function light() {
@@ -118,6 +131,12 @@ function light() {
   const sw = $('#startwrite'); if (sw) sw.disabled = S.players.length < 2;
   const sv = $('#startvote'); if (sv) sv.disabled = S.items.length < 2;
   tick();
+}
+function qr() {
+  const el = $('#qr'); if (!el || el.dataset.done) return;
+  if (!window.QRCode) { el.textContent = '(QR no disponible: usa el enlace)'; return; }
+  el.dataset.done = '1';
+  new QRCode(el, { text: location.origin + location.pathname + '?room=' + encodeURIComponent(CODE), width: 230, height: 230, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
 }
 function tick() { const t = $('#timer'); if (t) t.textContent = fmt(remaining()); }
 setInterval(tick, 500);
@@ -141,7 +160,7 @@ function hostView(s) {
   const link = location.origin + location.pathname + '?room=' + encodeURIComponent(CODE);
   const it = curItem();
   if (s === 'lobby') return `<div class="box"><h2>Sala <code>${esc(CODE)}</code></h2>
-    <p class="muted">Los estudiantes entran en:<br><b>${esc(link)}</b></p><div class="chips" id="plist"></div></div>
+    <p class="muted">Escanea el QR o entra en:<br><b>${esc(link)}</b></p><div class="qr" id="qr"></div><h2>Jugadores</h2><div class="chips" id="plist"></div></div>
     <div class="row"><label for="secs"><b>Segundos para escribir</b></label><input id="secs" type="number" min="30" max="900" value="120" style="width:110px">
     <button class="main" id="startwrite" data-act="startwrite" disabled>Empezar escritura</button></div>
     <p class="muted">Se necesitan al menos 2 jugadores.</p>`;
