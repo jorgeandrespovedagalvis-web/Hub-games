@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -57,7 +57,7 @@
 </head>
 <body>
 <a class="back" href="./">← Juegos</a>
-<main><h1>Two Truths and a Lie</h1><div id="app"><p class="muted">Cargando…</p></div></main>
+<main><h1>Two Truths and a Lie <small style="font-size:.9rem;font-weight:500">v6</small></h1><div id="app"><p class="muted">Cargando…</p></div></main>
 <div id="err" role="alert"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
@@ -77,7 +77,7 @@ let S = { room:null, players:[], items:[], votes:[] }, me = null, skew = 0, last
 function showError(e) {
   const t = $('#err'); if (!e) { t.style.display = 'none'; return; }
   const m = (e.message || String(e));
-  t.textContent = (/hub_|relation|schema|42P01|42501|PGRST/.test(m + (e.code||'')) ? 'Falta la base de datos: ejecuta setup_database.sql y habilita el juego. ' : '') + m;
+  t.textContent = (/hub_|relation|schema|42P01|42501|PGRST/.test(m + (e.code||'')) ? 'Database missing: run setup_database.sql and enable the game. ' : '') + m;
   t.style.display = 'block';
 }
 
@@ -108,9 +108,9 @@ const eligible = it => S.players.filter(p => p.id !== it.player_id).length;
 
 let openId = null;
 function countText() {
-  if (S.room.status === 'writing') return `${S.items.length}/${S.players.length} enviaron`;
+  if (S.room.status === 'writing') return `${S.items.length}/${S.players.length} submitted`;
   const need = S.items.reduce((a, i) => a + eligible(i), 0);
-  return `${S.votes.length}/${need} votos`;
+  return `${S.votes.length}/${need} votes`;
 }
 function viewKey() {
   if (!S.room) return 'none';
@@ -121,7 +121,7 @@ function viewKey() {
   return [S.room.status, hostMode, me && me.id, rv, openId, sub, mine, hostMode && S.room.status === 'voting' ? S.votes.length : '', sc].join('|');
 }
 function render() {
-  if (!S.room) { $('#app').innerHTML = '<p class="muted">No se pudo abrir la sala.</p>'; return; }
+  if (!S.room) { $('#app').innerHTML = '<p class="muted">Could not open the room.</p>'; return; }
   const k = viewKey();
   if (S.room.status !== 'voting') openId = null;
   document.body.dataset.phase = S.room.status;
@@ -129,7 +129,7 @@ function render() {
   light();
 }
 function light() {
-  const pl = $('#plist'); if (pl) pl.innerHTML = S.players.map(p => `<span class="chip">${pTag(p)}${hostMode ? ` <button class="x" data-kick="${p.id}" aria-label="Quitar a ${esc(p.name)}">✕</button>` : ''}</span>`).join('') || '<i class="muted">Aún nadie…</i>';
+  const pl = $('#plist'); if (pl) pl.innerHTML = S.players.map(p => `<span class="chip">${pTag(p)}${hostMode ? ` <button class="x" data-kick="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}</span>`).join('') || '<i class="muted">Nobody yet…</i>';
   const c = $('#count'); if (c) c.textContent = countText();
   const sw = $('#startwrite'); if (sw) sw.disabled = S.players.length < 2;
   const sv = $('#startvote'); if (sv) sv.disabled = S.items.length < 2;
@@ -137,11 +137,20 @@ function light() {
 }
 function qr() {
   const el = $('#qr'); if (!el || el.dataset.done) return;
-  if (!window.QRCode) { el.textContent = '(QR no disponible: usa el enlace)'; return; }
+  if (!window.QRCode) { el.textContent = '(QR unavailable: use the link)'; return; }
   el.dataset.done = '1';
   new QRCode(el, { text: location.origin + location.pathname + '?room=' + encodeURIComponent(CODE), width: 230, height: 230, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
 }
-function tick() { const t = $('#timer'); if (t) t.textContent = fmt(remaining()); }
+function tick() {
+  const t = $('#timer'); if (t) t.textContent = fmt(remaining());
+  const f = $('#l0');
+  if (f && !f.readOnly && S.room && S.room.status === 'writing' && st().ends_at && remaining() <= 0) lockWriting();
+}
+function lockWriting() {
+  [0, 1, 2].forEach(i => { const el = $('#l' + i); el.readOnly = true; el.style.opacity = '.7'; });
+  const b = document.querySelector('[data-act=submit]'); if (b) b.textContent = 'Send what I wrote';
+  const n = $('#late'); if (n) n.hidden = false;
+}
 setInterval(tick, 500);
 
 function view() {
@@ -152,42 +161,42 @@ function view() {
 }
 
 function joinView() {
-  return `<div class="box"><h2>Entrar a la sala <code>${esc(CODE)}</code></h2>
-    <label for="nm"><b>Tu nombre</b></label><input id="nm" type="text" maxlength="30" autocomplete="off">
-    <p><b>Tu avatar</b></p><div class="avs">${AV.map(a => `<button type="button" class="av ${a === pickedAv ? 'on' : ''}" data-av="${a}" aria-label="Avatar ${a}">${a}</button>`).join('')}</div>
-    <button class="main" data-act="join">Entrar</button></div>
-    <p><button class="ghost" data-act="host">Soy el anfitrión (proyector)</button></p>`;
+  return `<div class="box"><h2>Join room <code>${esc(CODE)}</code></h2>
+    <label for="nm"><b>Your name</b></label><input id="nm" type="text" maxlength="30" autocomplete="off">
+    <p><b>Your avatar</b></p><div class="avs">${AV.map(a => `<button type="button" class="av ${a === pickedAv ? 'on' : ''}" data-av="${a}" aria-label="Avatar ${a}">${a}</button>`).join('')}</div>
+    <button class="main" data-act="join">Join</button></div>
+    <p><button class="ghost" data-act="host">I'm the host (projector)</button></p>`;
 }
 
 function hostView(s) {
   const link = location.origin + location.pathname + '?room=' + encodeURIComponent(CODE);
-  const clear = '<button class="ghost" data-act="clearnames">🧽 Limpiar nombres</button>';
-  if (s === 'lobby') return `<div class="box"><h2>Sala <code>${esc(CODE)}</code></h2>
-    <p class="muted">Escanea el QR o entra en:<br><b>${esc(link)}</b></p><div class="qr" id="qr"></div><h2>Jugadores</h2><div class="chips" id="plist"></div></div>
-    <div class="row"><label for="secs"><b>Segundos para escribir</b></label><input id="secs" type="number" min="30" max="900" value="120" style="width:110px">
-    <button class="main" id="startwrite" data-act="startwrite" disabled>Empezar escritura</button>${clear}</div>
-    <p class="muted">Se necesitan al menos 2 jugadores. Toca ✕ para quitar a uno, o 🧽 para quitar todos.</p>`;
-  if (s === 'writing') return `<div class="box"><h2>Escribiendo…</h2><div class="timer" id="timer"></div><p class="big" id="count"></p></div>
-    <button class="main" id="startvote" data-act="startvote" disabled>Empezar votación</button>
-    <p class="muted">Se necesitan al menos 2 frases enviadas.</p>`;
-  if (s === 'voting') return `<div class="box"><h2>Votando…</h2><p class="muted">Cada jugador elige libremente a qué estudiante votar.</p><p class="big" id="count"></p>
+  const clear = '<button class="ghost" data-act="clearnames">🧽 Clear names</button>';
+  if (s === 'lobby') return `<div class="box"><h2>Room <code>${esc(CODE)}</code></h2>
+    <p class="muted">Scan the QR or go to:<br><b>${esc(link)}</b></p><div class="qr" id="qr"></div><h2>Players</h2><div class="chips" id="plist"></div></div>
+    <div class="row"><label for="secs"><b>Seconds to write</b></label><input id="secs" type="number" min="30" max="900" value="120" style="width:110px">
+    <button class="main" id="startwrite" data-act="startwrite" disabled>Start writing</button>${clear}</div>
+    <p class="muted">At least 2 players needed. Tap ✕ to remove one, or 🧽 to remove everyone.</p>`;
+  if (s === 'writing') return `<div class="box"><h2>Writing…</h2><div class="timer" id="timer"></div><p class="big" id="count"></p></div>
+    <button class="main" id="startvote" data-act="startvote" disabled>Start voting</button>
+    <p class="muted">At least 2 submitted statements needed.</p>`;
+  if (s === 'voting') return `<div class="box"><h2>Voting…</h2><p class="muted">Each player freely chooses which student to vote on.</p><p class="big" id="count"></p>
     ${S.items.map(it => `<div class="rank"><span>${pTag(byId(it.player_id))}</span><span class="s">${votesFor(it.id).length}/${eligible(it)}</span></div>`).join('')}</div>
-    <button class="main" data-act="closevote">Cerrar votación y revelar</button>`;
+    <button class="main" data-act="closevote">Close voting and reveal</button>`;
   if (s === 'reveal') { const rv = st().revealed || [];
-    return `<p class="muted">Revela las frases una por una.</p>` + S.items.map(it => rv.includes(it.id)
-      ? `<div class="box"><p class="muted">De ${pTag(byId(it.player_id))}</p>${revealList(it)}${resultList(it)}</div>`
-      : `<div class="box"><p class="big">${pTag(byId(it.player_id))}</p><button class="main" data-reveal="${it.id}">Revelar su mentira</button></div>`).join('')
-      + `<button class="main" data-act="podium">Ver podio</button>`; }
-  if (s === 'podium') return `<div class="box"><h2>🏆 Podio</h2>${ranking()}</div><div class="row"><button class="main" data-act="reset">Nueva partida</button>${clear}</div>`;
-  return '<p class="muted">Esperando…</p>';
+    return `<p class="muted">Reveal the statements one by one.</p>` + S.items.map(it => rv.includes(it.id)
+      ? `<div class="box"><p class="muted">From ${pTag(byId(it.player_id))}</p>${revealList(it)}${resultList(it)}</div>`
+      : `<div class="box"><p class="big">${pTag(byId(it.player_id))}</p><button class="main" data-reveal="${it.id}">Reveal the lie</button></div>`).join('')
+      + `<button class="main" data-act="podium">See podium</button>`; }
+  if (s === 'podium') return `<div class="box"><h2>🏆 Podium</h2>${ranking()}</div><div class="row"><button class="main" data-act="reset">New game</button>${clear}</div>`;
+  return '<p class="muted">Waiting…</p>';
 }
 
 function revealList(it) {
-  return `<ul class="opts">${it.data.lines.map((l, i) => `<li class="${i === it.data.lie_index ? 'lie' : 'truth'}"><b>${LET[i]}</b> ${esc(l)} ${i === it.data.lie_index ? '— <em>LA MENTIRA</em>' : '✓'}</li>`).join('')}</ul>`;
+  return `<ul class="opts">${it.data.lines.map((l, i) => `<li class="${i === it.data.lie_index ? 'lie' : 'truth'}"><b>${LET[i]}</b> ${esc(l)} ${i === it.data.lie_index ? '— <em>THE LIE</em>' : '✓'}</li>`).join('')}</ul>`;
 }
 function resultList(it) {
   const vs = votesFor(it.id);
-  if (!vs.length) return '<p class="muted">Nadie votó.</p>';
+  if (!vs.length) return '<p class="muted">Nobody voted.</p>';
   return `<div class="chips">${vs.map(v => `<span class="chip" style="background:${v.data.guess === it.data.lie_index ? 'var(--ok)' : 'var(--bad)'}">${pTag(byId(v.voter_id))} ${v.data.guess === it.data.lie_index ? '✓' : '✗'}</span>`).join('')}</div>`;
 }
 function ranking() {
@@ -198,37 +207,38 @@ function ranking() {
 function myMsg(it) {
   const mv = votesFor(it.id).find(v => v.voter_id === me.id);
   const wrong = votesFor(it.id).filter(v => v.data.guess !== it.data.lie_index).length;
-  return it.player_id === me.id ? `Engañaste a ${wrong} persona(s): +${wrong * 50}` : !mv ? 'No votaste en esta frase' : mv.data.guess === it.data.lie_index ? '¡Acertaste! +100' : 'Te engañaron 😅';
+  return it.player_id === me.id ? `You fooled ${wrong} person(s): +${wrong * 50}` : !mv ? 'You did not vote on this one' : mv.data.guess === it.data.lie_index ? 'Correct! +100' : 'You were fooled 😅';
 }
 function playerView(s) {
-  const hello = `<p class="muted">Juegas como ${pTag(me)}</p>`;
-  if (s === 'lobby') return `${hello}<div class="box"><h2>Estás dentro 🎉</h2><p>Espera a que empiece el juego.</p><div class="chips" id="plist"></div></div>`;
+  const hello = `<p class="muted">Playing as ${pTag(me)}</p>`;
+  if (s === 'lobby') return `${hello}<div class="box"><h2>You're in 🎉</h2><p>Wait for the game to start.</p><div class="chips" id="plist"></div></div>`;
   if (s === 'writing') {
-    if (S.items.some(i => i.player_id === me.id)) return `${hello}<div class="box"><h2>Enviado ✓</h2><p>Espera a los demás.</p><div class="timer" id="timer"></div></div>`;
-    return `${hello}<div class="box"><div class="timer" id="timer"></div><h2>Escribe 2 verdades y 1 mentira</h2>
-      <p class="muted">Marca con el círculo cuál es la mentira.</p>
-      ${[0, 1, 2].map(i => `<div class="line"><input type="radio" name="lie" value="${i}" aria-label="Marcar frase ${i + 1} como mentira"><input id="l${i}" type="text" maxlength="140" placeholder="Frase ${i + 1}" autocomplete="off"></div>`).join('')}
-      <button class="main" data-act="submit">Enviar</button></div>`;
+    if (S.items.some(i => i.player_id === me.id)) return `${hello}<div class="box"><h2>Sent ✓</h2><p>Wait for the others.</p><div class="timer" id="timer"></div></div>`;
+    return `${hello}<div class="box"><div class="timer" id="timer"></div><h2>Write 2 truths and 1 lie</h2>
+      <p class="muted">Tick the circle next to the lie.</p>
+      <p id="late" class="big" hidden>⏰ Time's up. You can't keep writing, but you can send what you have.</p>
+      ${[0, 1, 2].map(i => `<div class="line"><input type="radio" name="lie" value="${i}" aria-label="Mark statement ${i + 1} as the lie"><input id="l${i}" type="text" maxlength="140" placeholder="Statement ${i + 1}" autocomplete="off"></div>`).join('')}
+      <button class="main" data-act="submit">Send</button></div>`;
   }
   if (s === 'voting') {
     const others = S.items.filter(i => i.player_id !== me.id);
     const myv = id => votesFor(id).find(v => v.voter_id === me.id);
     const open = others.find(i => i.id === openId);
     if (open) { const mv = myv(open.id);
-      return `${hello}<div class="box"><button class="ghost" data-act="back">← Volver a la lista</button>
-        <p class="muted">De ${pTag(byId(open.player_id))} · ¿cuál es la mentira?</p>
+      return `${hello}<div class="box"><button class="ghost" data-act="back">← Back to the list</button>
+        <p class="muted">From ${pTag(byId(open.player_id))} · which one is the lie?</p>
         ${open.data.lines.map((l, i) => `<button class="opt ${mv && mv.data.guess === i ? 'sel' : ''}" data-guess="${i}"><b>${LET[i]}</b> ${esc(l)}</button>`).join('')}
-        <p class="muted">${mv ? 'Voto enviado. Puedes cambiarlo hasta que se cierre la votación.' : 'Toca una opción.'}</p></div>`; }
+        <p class="muted">${mv ? 'Vote sent. You can change it until voting closes.' : 'Tap an option.'}</p></div>`; }
     const done = others.filter(i => myv(i.id)).length;
-    return `${hello}<div class="box"><h2>Elige a quién votar</h2><p class="muted">Has votado ${done} de ${others.length}. Entra en cualquier estudiante, en el orden que quieras.</p>
-      ${others.map(i => `<button class="opt ${myv(i.id) ? 'sel' : ''}" data-open="${i.id}">${pTag(byId(i.player_id))}<span style="margin-left:auto">${myv(i.id) ? '✓ Votado' : 'Pendiente'}</span></button>`).join('') || '<p class="muted">Aún no hay frases de otros.</p>'}</div>`;
+    return `${hello}<div class="box"><h2>Choose who to vote on</h2><p class="muted">You've voted on ${done} of ${others.length}. Open any student, in any order.</p>
+      ${others.map(i => `<button class="opt ${myv(i.id) ? 'sel' : ''}" data-open="${i.id}">${pTag(byId(i.player_id))}<span style="margin-left:auto">${myv(i.id) ? '✓ Voted' : 'Pending'}</span></button>`).join('') || '<p class="muted">No statements from others yet.</p>'}</div>`;
   }
   if (s === 'reveal') { const rv = st().revealed || [];
     return hello + S.items.map(it => rv.includes(it.id)
-      ? `<div class="box"><p class="muted">De ${pTag(byId(it.player_id))}</p><p class="big">${myMsg(it)}</p>${revealList(it)}</div>`
-      : `<div class="box"><p class="big">${pTag(byId(it.player_id))}</p><p class="muted">🔒 Esperando la revelación…</p></div>`).join(''); }
-  if (s === 'podium') return `${hello}<div class="box"><h2>🏆 Podio</h2>${ranking()}</div>`;
-  return `${hello}<p class="muted">Esperando…</p>`;
+      ? `<div class="box"><p class="muted">From ${pTag(byId(it.player_id))}</p><p class="big">${myMsg(it)}</p>${revealList(it)}</div>`
+      : `<div class="box"><p class="big">${pTag(byId(it.player_id))}</p><p class="muted">🔒 Waiting for the reveal…</p></div>`).join(''); }
+  if (s === 'podium') return `${hello}<div class="box"><h2>🏆 Podium</h2>${ranking()}</div>`;
+  return `${hello}<p class="muted">Waiting…</p>`;
 }
 
 // ---- actions ----
@@ -262,10 +272,15 @@ const actions = {
     if (error) showError(error); refresh();
   },
   async submit() {
-    const lines = [0, 1, 2].map(i => $('#l' + i).value.trim());
+    if (S.room.status !== 'writing') return showError({ message: 'Writing has ended.' });
+    const late = st().ends_at && remaining() <= 0;
+    let lines = [0, 1, 2].map(i => $('#l' + i).value.trim());
     const lie = document.querySelector('input[name=lie]:checked');
-    if (lines.some(l => !l) || !lie) return showError({ message: 'Escribe las 3 frases y marca cuál es la mentira.' });
-    if (st().ends_at && remaining() <= 0) return showError({ message: 'Se acabó el tiempo.' });
+    if (!lie) return showError({ message: 'Mark which one is the lie.' });
+    if (late) {
+      if (lines.every(l => !l)) return showError({ message: 'There is nothing written to send.' });
+      lines = lines.map(l => l || '(not written)');
+    } else if (lines.some(l => !l)) return showError({ message: 'Write all 3 statements and mark the lie.' });
     await supabase.from('hub_items').delete().eq('room_code', CODE).eq('player_id', me.id).eq('kind', 'statement');
     const { error } = await supabase.from('hub_items').insert([{ room_code: CODE, player_id: me.id, kind: 'statement', data: { lines, lie_index: +lie.value } }]);
     if (error) showError(error); refresh();
@@ -275,13 +290,13 @@ const actions = {
   async podium() { await patchRoom(CODE, { status: 'podium' }); refresh(); },
   back() { openId = null; render(); },
   async clearnames() {
-    if (!confirm('¿Quitar a todos los jugadores (y sus frases) y volver al lobby?')) return;
+    if (!confirm('Remove all players (and their statements) and return to the lobby?')) return;
     const { error } = await supabase.from('hub_players').delete().eq('room_code', CODE);
     if (error) return showError(error);
     await patchRoom(CODE, { status: 'lobby', revealed: [], scored: [], ends_at: null }); refresh();
   },
   async reset() {
-    if (!confirm('¿Borrar frases y puntajes y volver al lobby?')) return;
+    if (!confirm('Delete statements and scores and return to the lobby?')) return;
     await supabase.from('hub_items').delete().eq('room_code', CODE);
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
     await patchRoom(CODE, { status: 'lobby', revealed: [], scored: [], ends_at: null }); refresh();
