@@ -69,6 +69,7 @@
     { id:'stop',  title:'STOP!', description:'Scattergories de vocabulario en inglés y francés.', emoji:'🛑', color:'#fb7185', path:'stop.html',  enabled:true, sort_order:10 },
     { id:'ttl',   title:'Two Truths and a Lie', description:'Escribe dos verdades y una mentira; el grupo adivina.', emoji:'🤥', color:'#38bdf8', path:'ttl.html',   enabled:true, sort_order:20 },
     { id:'emoji', title:'Emoji Guess', description:'Adivina el país o la película a partir de los emojis.', emoji:'🧩', color:'#4ade80', path:'emoji.html', enabled:true, sort_order:30 }
+    { id:'taboo', title:'Forbidden Words', description:'Describe advanced verbs and objects without using restricted words.', emoji:'🚫', color:'#f97316', path:'taboo.html', enabled:true, sort_order:40 }
   ];
   var games = CATALOG.slice();
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
