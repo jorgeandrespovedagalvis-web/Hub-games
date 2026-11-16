@@ -14,7 +14,7 @@
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; border-top:10px solid var(--gray); }
   body[data-phase=playing] { border-top-color:var(--red); } body[data-phase=podium] { border-top-color:#fff; }
-  main { max-width:780px; margin:0 auto; padding:56px 18px 90px; }
+  main { max-width:860px; margin:0 auto; padding:56px 18px 90px; }
   h1 { font-size:clamp(1.8rem,6vw,2.8rem); font-weight:800; margin:0 0 6px; line-height:1.05; }
   h2 { font-size:1.3rem; margin:0 0 10px; }
   .back { position:fixed; top:14px; left:10px; font:800 12px system-ui; background:#fff; color:#000; padding:5px 12px; border-radius:99px; text-decoration:none; z-index:5; }
@@ -22,10 +22,10 @@
   .muted { color:var(--muted); }
   .chips { display:flex; flex-wrap:wrap; gap:8px; }
   .chip { border:2px solid #fff; padding:3px 10px; font-weight:800; background:var(--gray); }
-  button, input, textarea { font:inherit; color:inherit; }
+  button, input { font:inherit; color:inherit; }
   button { cursor:pointer; border:3px solid #fff; background:transparent; font-weight:800; padding:10px 18px; }
   button.main { background:var(--red); } button.main:disabled { opacity:.4; cursor:not-allowed; }
-  button:focus-visible, input:focus-visible, textarea:focus-visible { outline:3px solid var(--redl); outline-offset:2px; }
+  button:focus-visible, input:focus-visible { outline:3px solid var(--redl); outline-offset:2px; }
   input[type=text], input[type=number] { width:100%; padding:10px; border:3px solid #fff; background:#000; }
   input[type=number] { width:100px; }
   .avs { display:grid; grid-template-columns:repeat(auto-fill,minmax(54px,1fr)); gap:8px; margin:10px 0 16px; }
@@ -37,20 +37,38 @@
   .tile .big { font-size:3.2rem; line-height:1; }
   .tile.on { background:var(--red); }
 
-  /* Two-tone Taboo Card */
-  .tcard-wrap { margin:20px 0; }
-  .tcard { border:3px solid #fff; box-shadow:6px 6px 0 #3a3d3f; overflow:hidden; margin-bottom:10px; }
-  .tcard-head { background:var(--card-top); color:#0a1f18; padding:16px 18px; text-align:center; border-bottom:4px solid #000; position:relative; }
+  /* Two-tone Taboo Card (Student Phone View) */
+  .tcard-wrap { margin:22px 0; }
+  .tcard { border:3px solid #fff; box-shadow:6px 6px 0 #3a3d3f; overflow:hidden; position:relative; transition:transform .12s, box-shadow .12s, opacity .2s; }
+  .tcard.done-ok { border-color:var(--ok); }
+  .tcard.done-no { opacity:.6; }
+  .tcard-head { background:var(--card-top); color:#0a1f18; padding:18px 20px; text-align:center; border-bottom:4px solid #000; position:relative; }
   .tcard-num { position:absolute; left:12px; top:10px; font-size:.8rem; font-weight:800; background:#000; color:#fff; padding:2px 8px; }
-  .tcard-word { font-size:clamp(1.5rem,5vw,2.1rem); font-weight:800; letter-spacing:-.01em; margin:0; }
-  .tcard-body { background:var(--card-bot); color:#fff; padding:16px 18px 20px; text-align:center; }
-  .tcard-label { font-size:.78rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; margin:0 0 10px; opacity:.95; }
-  .tcard-ban { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:4px; font-size:1.25rem; font-weight:800; text-shadow:1px 1px 0 rgba(0,0,0,.35); }
-  .tcard-ban li.hit { background:#000; color:#fde047; padding:2px 10px; display:inline-block; margin:0 auto; }
+  .tcard-word { font-size:clamp(1.6rem,5.5vw,2.3rem); font-weight:800; letter-spacing:-.01em; margin:6px 0 0; }
+  .tcard-body { background:var(--card-bot); color:#fff; padding:18px 20px 24px; text-align:center; }
+  .tcard-label { font-size:.82rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; margin:0 0 12px; opacity:.95; }
+  .tcard-ban { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:6px; font-size:1.35rem; font-weight:800; text-shadow:1px 1px 0 rgba(0,0,0,.35); }
 
-  .explain-box { width:100%; min-height:76px; padding:10px 12px; border:3px solid #fff; background:#000; color:#fff; resize:vertical; }
-  .explain-box.violation { border-color:#fde047; }
-  .ban-warn { color:#fde047; font-weight:800; font-size:.9rem; margin:6px 0 0; }
+  /* Host Interactive Clickable Cards Grid */
+  .host-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:16px; margin-top:12px; }
+  .hcard { display:block; width:100%; padding:0; text-align:center; border:3px solid #fff; box-shadow:5px 5px 0 #3a3d3f; overflow:hidden; position:relative; transition:transform .1s, box-shadow .1s; }
+  .hcard:hover { transform:translate(2px,2px); box-shadow:3px 3px 0 #3a3d3f; }
+  .hcard:disabled { opacity:.6; cursor:wait; }
+  .hcard .hcard-head { background:var(--card-top); color:#0a1f18; padding:12px 10px; border-bottom:3px solid #000; font-size:1.25rem; font-weight:800; }
+  .hcard .hcard-body { background:var(--card-bot); color:#fff; padding:10px 10px 14px; }
+  .hcard .hcard-lbl { font-size:.68rem; font-weight:800; letter-spacing:.1em; text-transform:uppercase; margin:0 0 6px; opacity:.9; }
+  .hcard .hcard-ban { list-style:none; padding:0; margin:0; font-size:.95rem; font-weight:800; line-height:1.35; }
+  .hcard.state-valid { border-color:var(--ok); }
+  .hcard.state-invalid { border-color:var(--red); opacity:.75; }
+
+  /* Big Check / Cross Stamp Overlay */
+  .stamp {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:4.5rem; font-weight:800; pointer-events:none;
+    background:rgba(0,0,0,.48); text-shadow:0 4px 12px rgba(0,0,0,.8);
+  }
+  .stamp.ok { color:var(--ok); }
+  .stamp.no { color:#ff4d4d; }
 
   .timer { font-size:2.4rem; font-weight:800; font-variant-numeric:tabular-nums; }
   .big { font-size:1.35rem; font-weight:800; }
@@ -64,17 +82,6 @@
   .chart-track { width:100%; height:26px; background:#000; border:2px solid #fff; padding:2px; }
   .chart-bar { height:100%; background:var(--red); transition:width .4s ease-out; min-width:4px; }
   .chart-bar.top { background:var(--ok); }
-
-  /* Podium Review List */
-  .rev-item { border:2px solid #fff; background:#000; padding:12px; margin:10px 0; }
-  .rev-head { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
-  .rev-ban { font-size:.85rem; color:#fdba74; font-weight:800; }
-  .rev-txt { margin:6px 0; padding:8px; background:var(--dark); border-left:6px solid var(--ok); }
-  .rev-txt.bad { border-left-color:#fde047; }
-  .score-btns { display:flex; gap:8px; margin-top:8px; }
-  .score-btns button { padding:5px 12px; font-size:.9rem; }
-  .score-btns button.active-ok { background:var(--ok); color:#000; border-color:var(--ok); }
-  .score-btns button.active-no { background:var(--red); color:#fff; }
 
   .fab { position:fixed; right:12px; bottom:12px; z-index:6; background:#000; box-shadow:4px 4px 0 #3a3d3f; }
   .x { padding:2px 8px; border:none; font-size:1rem; }
@@ -127,31 +134,31 @@ const RAW = {
     ['Contemplate',   ['think', 'deeply', 'consider', 'stare', 'future']]
   ],
   objects: [
-    ['Pallet Jack',   ['warehouse', 'lift', 'wheels', 'wood', 'forklift']],
-    ['Silo',          ['farm', 'grain', 'tower', 'tall', 'store']],
-    ['Chandelier',    ['ceiling', 'lights', 'hanging', 'crystal', 'luxury']],
-    ['Wheelbarrow',   ['garden', 'push', 'wheel', 'dirt', 'carry']],
-    ['Forklift',      ['warehouse', 'heavy', 'lift', 'machine', 'drive']],
-    ['Colander',      ['pasta', 'drain', 'water', 'holes', 'kitchen']],
-    ['Pitchfork',     ['hay', 'farm', 'sharp', 'handle', 'barn']],
-    ['Thermostat',    ['temperature', 'heat', 'cold', 'wall', 'control']],
-    ['Ratchet Strap', ['tie', 'cargo', 'truck', 'tighten', 'secure']],
-    ['Incubator',     ['eggs', 'warm', 'hatch', 'chicks', 'farm']],
-    ['Dehumidifier',  ['water', 'air', 'moisture', 'damp', 'room']],
-    ['Barcode Scanner',['laser', 'beep', 'price', 'inventory', 'read']],
-    ['Trough',        ['animals', 'drink', 'water', 'feed', 'livestock']],
-    ['Circuit Breaker',['electricity', 'power', 'switch', 'box', 'fuse']],
-    ['Shrink Wrap',   ['plastic', 'roll', 'pallet', 'cover', 'pack']],
-    ['Scarecrow',     ['birds', 'field', 'straw', 'clothes', 'frighten']],
-    ['Caulking Gun',  ['seal', 'gap', 'tube', 'squeeze', 'silicone']],
-    ['Conveyor Belt', ['move', 'factory', 'warehouse', 'boxes', 'rolling']],
-    ['Milking Parlor',['cows', 'dairy', 'barn', 'machine', 'farm']],
-    ['Deadbolt',      ['lock', 'door', 'key', 'security', 'metal']],
-    ['Loading Dock',  ['truck', 'warehouse', 'unload', 'door', 'cargo']],
-    ['Cistern',       ['rain', 'water', 'tank', 'underground', 'store']],
+    ['Pallet Jack',      ['warehouse', 'lift', 'wheels', 'wood', 'forklift']],
+    ['Silo',             ['farm', 'grain', 'tower', 'tall', 'store']],
+    ['Chandelier',       ['ceiling', 'lights', 'hanging', 'crystal', 'luxury']],
+    ['Wheelbarrow',      ['garden', 'push', 'wheel', 'dirt', 'carry']],
+    ['Forklift',         ['warehouse', 'heavy', 'lift', 'machine', 'drive']],
+    ['Colander',         ['pasta', 'drain', 'water', 'holes', 'kitchen']],
+    ['Pitchfork',        ['hay', 'farm', 'sharp', 'handle', 'barn']],
+    ['Thermostat',       ['temperature', 'heat', 'cold', 'wall', 'control']],
+    ['Ratchet Strap',    ['tie', 'cargo', 'truck', 'tighten', 'secure']],
+    ['Incubator',        ['eggs', 'warm', 'hatch', 'chicks', 'farm']],
+    ['Dehumidifier',     ['water', 'air', 'moisture', 'damp', 'room']],
+    ['Barcode Scanner',  ['laser', 'beep', 'price', 'inventory', 'read']],
+    ['Trough',           ['animals', 'drink', 'water', 'feed', 'livestock']],
+    ['Circuit Breaker',  ['electricity', 'power', 'switch', 'box', 'fuse']],
+    ['Shrink Wrap',      ['plastic', 'roll', 'pallet', 'cover', 'pack']],
+    ['Scarecrow',        ['birds', 'field', 'straw', 'clothes', 'frighten']],
+    ['Caulking Gun',     ['seal', 'gap', 'tube', 'squeeze', 'silicone']],
+    ['Conveyor Belt',    ['move', 'factory', 'warehouse', 'boxes', 'rolling']],
+    ['Milking Parlor',   ['cows', 'dairy', 'barn', 'machine', 'farm']],
+    ['Deadbolt',         ['lock', 'door', 'key', 'security', 'metal']],
+    ['Loading Dock',     ['truck', 'warehouse', 'unload', 'door', 'cargo']],
+    ['Cistern',          ['rain', 'water', 'tank', 'underground', 'store']],
     ['Mortar and Pestle',['crush', 'grind', 'spices', 'bowl', 'kitchen']],
-    ['Hand Truck',    ['dolly', 'boxes', 'two wheels', 'tilt', 'move']],
-    ['Weathervane',   ['wind', 'roof', 'direction', 'rooster', 'spin']]
+    ['Hand Truck',       ['dolly', 'boxes', 'two wheels', 'tilt', 'move']],
+    ['Weathervane',      ['wind', 'roof', 'direction', 'rooster', 'spin']]
   ]
 };
 
@@ -177,7 +184,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;
 let sid; try { sid = localStorage.getItem('taboo_sid'); if (!sid) { sid = crypto.randomUUID(); localStorage.setItem('taboo_sid', sid); } } catch { sid = crypto.randomUUID(); }
 let hostMode = false;
 try { hostMode = localStorage.getItem('taboo_host_' + CODE) === '1' || new URLSearchParams(location.search).get('host') === '1'; } catch {}
-let S = { room: null, players: [], items: [] }, me = null, skew = 0, lastKey = '', pickedAv = AV[0], cat = 'verbs';
+let S = { room: null, players: [] }, me = null, skew = 0, lastKey = '', pickedAv = AV[0], cat = 'verbs';
 
 function showError(e) {
   const t = $('#err'); if (!e) { t.style.display = 'none'; return; }
@@ -187,15 +194,14 @@ function showError(e) {
 }
 
 async function refresh() {
-  const [r, p, i] = await Promise.all([
+  const [r, p] = await Promise.all([
     supabase.from('hub_rooms').select('*').eq('code', CODE).maybeSingle(),
-    supabase.from('hub_players').select('*').eq('room_code', CODE).order('joined_at'),
-    supabase.from('hub_items').select('*').eq('room_code', CODE).eq('kind', 'explanations')
+    supabase.from('hub_players').select('*').eq('room_code', CODE).order('joined_at')
   ]);
-  const err = r.error || p.error || i.error;
+  const err = r.error || p.error;
   if (err) { showError(err); return; }
   showError(null);
-  S = { room: r.data, players: p.data || [], items: i.data || [] };
+  S = { room: r.data, players: p.data || [] };
   me = S.players.find(x => x.session_id === sid) || null;
   render();
 }
@@ -206,24 +212,11 @@ const pTag = p => p ? `${esc(p.avatar || '🙂')} ${esc(p.name)}` : '?';
 const remaining = () => { const e = st().ends_at; return e ? Math.max(0, Math.ceil((new Date(e).getTime() - (Date.now() + skew)) / 1000)) : 0; };
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
 const myHand = () => (me && st().hands && st().hands[me.id]) || [];
-const myItem = () => me && S.items.find(i => i.player_id === me.id);
-
-// Check if text contains target word or any forbidden word
-function findViolations(cardId, text) {
-  const card = CARDS[cardId];
-  if (!card || !text) return [];
-  const clean = text.toLowerCase();
-  const restricted = [card.word, ...card.ban];
-  return restricted.filter(w => {
-    const escaped = w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`\\b${escaped}`, 'i').test(clean);
-  });
-}
 
 function viewKey() {
   if (!S.room) return 'none';
-  const sc = S.room.status === 'podium' ? S.players.reduce((a, p) => a + p.score, 0) + ':' + S.items.length + ':' + JSON.stringify(st().grades || {}) : '';
-  return [S.room.status, hostMode, me && me.id, !!myItem(), st().ends_at, sc].join('|');
+  const sc = S.players.map(p => p.id + ':' + p.score).join(',') + '|' + JSON.stringify(st().grades || {});
+  return [S.room.status, hostMode, me && me.id, st().ends_at, sc].join('|');
 }
 
 function render() {
@@ -236,7 +229,6 @@ function render() {
 
 function light() {
   const pl = $('#plist'); if (pl) pl.innerHTML = S.players.map(p => `<span class="chip">${pTag(p)}${hostMode ? ` <button class="x" data-kick="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}</span>`).join('') || '<i class="muted">Nobody yet…</i>';
-  const c = $('#count'); if (c) c.textContent = `${S.items.length}/${S.players.length} submitted`;
   const sg = $('#startgame'); if (sg) sg.disabled = S.players.length < 1;
   tick();
 }
@@ -250,14 +242,9 @@ function qr() {
 
 function tick() {
   const t = $('#timer'); if (t) t.textContent = fmt(remaining());
-  const f = $('.explain-box');
-  if (f && !f.readOnly && S.room && S.room.status === 'playing' && st().ends_at && remaining() <= 0) lockPlay();
-}
-
-function lockPlay() {
-  document.querySelectorAll('.explain-box').forEach(el => { el.readOnly = true; el.style.opacity = '.7'; });
-  const b = document.querySelector('[data-act=submit]'); if (b) b.textContent = 'Send what I wrote';
-  const n = $('#late'); if (n) n.hidden = false;
+  if (S.room && S.room.status === 'playing' && st().ends_at && remaining() <= 0) {
+    const n = $('#late'); if (n) n.hidden = false;
+  }
 }
 setInterval(tick, 500);
 
@@ -276,60 +263,61 @@ function joinView() {
 }
 
 function sortedRows() {
-  return S.players.map(p => {
-    const it = S.items.find(i => i.player_id === p.id);
-    return { p, it, t: it ? new Date(it.created_at).getTime() : Infinity };
-  }).sort((a, b) => b.p.score - a.p.score || (a.t === b.t ? 0 : a.t < b.t ? -1 : 1));
+  return [...S.players].sort((a, b) => b.score - a.score || new Date(a.joined_at) - new Date(b.joined_at));
 }
 
 function rankHtml() {
   const rows = sortedRows();
-  return rows.map((r, i) => `<div class="rank ${me && r.p.id === me.id ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span><span>${pTag(r.p)}</span><span class="s">${r.p.score} pts</span></div>`).join('') || '<p class="muted">No players.</p>';
+  return rows.map((p, i) => `<div class="rank ${me && p.id === me.id ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span><span>${pTag(p)}</span><span class="s">${p.score} pts</span></div>`).join('') || '<p class="muted">No players.</p>';
 }
 
 function chartHtml() {
   const rows = sortedRows();
   if (!rows.length) return '';
   const perPlayer = st().perPlayer || 2;
-  const maxPossible = Math.max(perPlayer * 100, ...rows.map(r => r.p.score), 100);
-  const topScore = rows[0].p.score;
-  return `<div class="box"><h2>📊 Score Chart</h2><div class="chart">${rows.map(r => {
-    const pct = Math.round((r.p.score / maxPossible) * 100);
-    const isTop = r.p.score > 0 && r.p.score === topScore;
+  const maxPossible = Math.max(perPlayer * 100, ...rows.map(p => p.score), 100);
+  const topScore = rows[0].score;
+  return `<div class="box"><h2>📊 Score Chart</h2><div class="chart">${rows.map(p => {
+    const pct = Math.round((p.score / maxPossible) * 100);
+    const isTop = p.score > 0 && p.score === topScore;
     return `<div class="chart-row">
-      <div class="chart-meta"><span>${pTag(r.p)}</span><span>${r.p.score} pts (${pct}%)</span></div>
+      <div class="chart-meta"><span>${pTag(p)}</span><span>${p.score} pts (${pct}%)</span></div>
       <div class="chart-track"><div class="chart-bar ${isTop ? 'top' : ''}" style="width:${pct}%"></div></div>
     </div>`;
   }).join('')}</div></div>`;
 }
 
-function reviewHtml(isHost) {
+// Host clicks directly on any student's card to cycle: Unmarked -> ✓ Check (+100) -> ✕ Cross (0) -> Unmarked
+function hostCardsGridHtml() {
   const grades = st().grades || {};
   return S.players.map(p => {
     const hand = (st().hands && st().hands[p.id]) || [];
-    const it = S.items.find(i => i.player_id === p.id);
-    const answers = (it && it.data && it.data.answers) || {};
     if (!hand.length) return '';
-    return `<div class="box"><h2>${pTag(p)}</h2>${hand.map(cid => {
-      const card = CARDS[cid];
-      if (!card) return '';
-      const txt = answers[cid] || '';
-      const hits = findViolations(cid, txt);
-      const key = `${p.id}:${cid}`;
-      const status = grades[key] || (txt && !hits.length ? 'valid' : 'invalid');
-      return `<div class="rev-item">
-        <div class="rev-head">
-          <strong style="font-size:1.15rem">${esc(card.word)}</strong>
-          <span class="rev-ban">Forbidden: ${card.ban.map(esc).join(', ')}</span>
-        </div>
-        <div class="rev-txt ${status === 'invalid' ? 'bad' : ''}">${txt ? esc(txt) : '<i class="muted">(No explanation sent)</i>'}</div>
-        ${hits.length ? `<div class="ban-warn">⚠️ Used restricted word(s): ${hits.map(esc).join(', ')}</div>` : ''}
-        ${isHost ? `<div class="score-btns">
-          <button class="${status === 'valid' ? 'active-ok' : ''}" data-grade="${key}" data-val="valid">✓ Valid (+100)</button>
-          <button class="${status === 'invalid' ? 'active-no' : ''}" data-grade="${key}" data-val="invalid">✕ Invalid (0)</button>
-        </div>` : `<div class="muted" style="font-size:.9rem;margin-top:4px">${status === 'valid' ? '✓ Accepted (+100 pts)' : '✕ Not accepted (0 pts)'}</div>`}
-      </div>`;
-    }).join('')}</div>`;
+    return `<div class="box">
+      <div class="row" style="justify-content:space-between;margin:0">
+        <h2 style="margin:0">${pTag(p)}</h2>
+        <span class="chip">${p.score} pts</span>
+      </div>
+      <div class="host-grid">${hand.map(cid => {
+        const card = CARDS[cid];
+        if (!card) return '';
+        const key = `${p.id}:${cid}`;
+        const status = grades[key] || 'none';
+        const stamp = status === 'valid'
+          ? '<div class="stamp ok" aria-label="Correct">✓</div>'
+          : status === 'invalid'
+          ? '<div class="stamp no" aria-label="Wrong">✕</div>'
+          : '';
+        return `<button type="button" class="hcard state-${status}" data-toggle-card="${key}" title="Click to toggle ✓ Check (+100 pts) or ✕ Cross (0 pts)">
+          <div class="hcard-head">${esc(card.word)}</div>
+          <div class="hcard-body">
+            <p class="hcard-lbl">Forbidden:</p>
+            <ul class="hcard-ban">${card.ban.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+          </div>
+          ${stamp}
+        </button>`;
+      }).join('')}</div>
+    </div>`;
   }).join('');
 }
 
@@ -342,77 +330,81 @@ function hostView(s) {
       <p class="muted">Scan the QR or go to:<br><b>${esc(link)}</b></p><div class="qr" id="qr"></div><h2>Players (${S.players.length})</h2><div class="chips" id="plist"></div></div>
       <div class="box"><h2>Game panel</h2><p class="muted">1. Choose the deck category</p>
       <div class="tiles">${Object.entries(CATS).map(([k, c]) => `<button class="tile ${k === cat ? 'on' : ''}" data-cat="${k}" aria-label="${c.label}"><span class="big">${c.icon}</span><b>${c.label}</b><small class="muted">${c.desc}</small></button>`).join('')}</div>
-      <p class="muted">2. Set unique cards per student & timer (25 total cards in deck — no repeats across phones)</p>
+      <p class="muted">2. Set unique cards per student & timer (25 total cards — no repeats across phones)</p>
       <div class="row"><label for="cnt"><b>Cards / person</b></label><input id="cnt" type="number" min="1" max="${maxPerPlayer}" value="${Math.min(2, maxPerPlayer)}">
       <label for="secs"><b>Seconds</b></label><input id="secs" type="number" min="30" max="1800" value="180"></div>
       <div class="row"><button class="main" id="startgame" data-act="start" disabled>Start game</button>${clear}</div>
-      <p class="muted">Each student receives completely different cards. Tap ✕ to remove one player, or 🧽 to wash out everyone.</p></div>`;
+      <p class="muted">Students explain orally from their seats. Click any card on your screen to mark it ✓ (+100 pts) or ✕ (0 pts).</p></div>`;
   }
-  if (s === 'playing') return `<div class="box"><h2>${CATS[st().category]?.icon || ''} ${CATS[st().category]?.label || ''}: ${st().perPlayer || 1} card(s) per student</h2>
-    <div class="timer" id="timer"></div><p class="big" id="count"></p></div><button class="main" data-act="results">Show results</button>`;
+  if (s === 'playing') return `<div class="box">
+    <div class="row" style="justify-content:space-between;margin:0">
+      <div>
+        <h2 style="margin:0">${CATS[st().category]?.icon || ''} ${CATS[st().category]?.label || ''}</h2>
+        <p class="muted" style="margin:4px 0 0">Click a card to stamp <b>✓ (+100 pts)</b> or <b>✕ (0 pts)</b></p>
+      </div>
+      <div class="timer" id="timer"></div>
+    </div>
+    <p id="late" class="big" style="color:#fde047;margin:8px 0 0" hidden>⏰ Time's up!</p>
+  </div>
+  <button class="main" data-act="results">Finish & Show Podium Chart</button>
+  ${hostCardsGridHtml()}`;
   if (s === 'podium') return `<div class="box"><h2>🏆 Results</h2>${rankHtml()}</div>
     ${chartHtml()}
-    <h2>📋 Explanations Review (Click to override points)</h2>
-    ${reviewHtml(true)}
+    <h2>📋 Cards Graded (Click any card to adjust)</h2>
+    ${hostCardsGridHtml()}
     <div class="row"><button class="main" data-act="reset">New game</button>${clear}</div>`;
   return '<p class="muted">Waiting…</p>';
 }
 
 function playerView(s) {
-  const hello = `<p class="muted">Playing as ${pTag(me)}</p>`;
+  const hello = `<p class="muted">Playing as ${pTag(me)} · <b>${me.score} pts</b></p>`;
   if (s === 'lobby') return `${hello}<div class="box"><h2>You're in 🎉</h2><p>Wait for the host to deal the cards.</p><div class="chips" id="plist"></div></div>`;
   if (s === 'playing') {
-    if (myItem()) return `${hello}<div class="box"><h2>Sent ✓</h2><p>Get ready to explain your cards aloud or wait for the results!</p><div class="timer" id="timer"></div></div>`;
     const hand = myHand();
-    if (!hand.length) return `${hello}<div class="box"><h2>Spectating this round</h2><p>You joined after cards were dealt. Wait for the next round!</p><div class="timer" id="timer"></div></div>`;
-    return `${hello}<div class="box"><div class="timer" id="timer"></div><h2>Explain in your own words</h2>
-      <p class="muted">Describe each word below <b>without</b> using the target word or any of the 5 forbidden words.</p>
-      <p id="late" class="big" hidden>⏰ Time's up! You can't edit anymore, but you can still send what you wrote.</p>
+    if (!hand.length) return `${hello}<div class="box"><h2>Spectating this round</h2><p>You joined after cards were dealt. Listen and guess your classmates' words!</p><div class="timer" id="timer"></div></div>`;
+    const grades = st().grades || {};
+    return `${hello}<div class="box"><div class="timer" id="timer"></div><h2>Explain orally from your seat!</h2>
+      <p class="muted">Describe each word to the class <b>without</b> saying the target word or any of the 5 forbidden words.</p>
+      <p id="late" class="big" style="color:#fde047" hidden>⏰ Time's up!</p>
       ${hand.map((id, i) => {
         const card = CARDS[id];
-        return `<div class="tcard-wrap" data-wrap="${id}">
-          <div class="tcard">
+        const status = grades[`${me.id}:${id}`] || 'none';
+        const stamp = status === 'valid'
+          ? '<div class="stamp ok" aria-label="Correct">✓</div>'
+          : status === 'invalid'
+          ? '<div class="stamp no" aria-label="Wrong">✕</div>'
+          : '';
+        return `<div class="tcard-wrap">
+          <div class="tcard ${status === 'valid' ? 'done-ok' : status === 'invalid' ? 'done-no' : ''}">
             <div class="tcard-head">
               <span class="tcard-num">CARD ${i + 1} / ${hand.length}</span>
               <h3 class="tcard-word">${esc(card.word)}</h3>
             </div>
             <div class="tcard-body">
               <p class="tcard-label">Forbidden Words:</p>
-              <ul class="tcard-ban">${card.ban.map(w => `<li data-banword="${esc(w.toLowerCase())}">${esc(w)}</li>`).join('')}</ul>
+              <ul class="tcard-ban">${card.ban.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
             </div>
+            ${stamp}
           </div>
-          <textarea class="explain-box" data-card="${id}" maxlength="350" placeholder="Write your explanation here without using the forbidden words…" aria-label="Explanation for ${esc(card.word)}"></textarea>
-          <p class="ban-warn" data-warn="${id}" hidden></p>
         </div>`;
       }).join('')}
-      <button class="main" data-act="submit">Send explanations</button></div>`;
+    </div>`;
   }
   if (s === 'podium') {
-    return `${hello}<div class="box"><h2>🏆 Results</h2>${rankHtml()}</div>${chartHtml()}${reviewHtml(false)}`;
+    const hand = myHand();
+    const grades = st().grades || {};
+    const summary = hand.length ? `<div class="box"><h2>Your Cards</h2>${hand.map(cid => {
+      const card = CARDS[cid];
+      const status = grades[`${me.id}:${cid}`];
+      return `<div class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid #444">
+        <div><strong>${esc(card.word)}</strong> <span class="muted">(${card.ban.join(', ')})</span></div>
+        <div><b>${status === 'valid' ? '✓ +100 pts' : '✕ 0 pts'}</b></div>
+      </div>`;
+    }).join('')}</div>` : '';
+    return `${hello}<div class="box"><h2>🏆 Results</h2>${rankHtml()}</div>${chartHtml()}${summary}`;
   }
   return `${hello}<p class="muted">Waiting…</p>`;
 }
-
-// Live forbidden word detector while typing
-document.addEventListener('input', e => {
-  const ta = e.target.closest('.explain-box');
-  if (!ta) return;
-  const cid = ta.dataset.card;
-  const hits = findViolations(cid, ta.value);
-  const warn = document.querySelector(`[data-warn="${cid}"]`);
-  const wrap = document.querySelector(`[data-wrap="${cid}"]`);
-  ta.classList.toggle('violation', hits.length > 0);
-  if (warn) {
-    warn.hidden = hits.length === 0;
-    warn.textContent = hits.length ? `⚠️ Forbidden word detected: "${hits.join(', ')}"` : '';
-  }
-  if (wrap) {
-    wrap.querySelectorAll('[data-banword]').forEach(li => {
-      const bw = li.dataset.banword;
-      li.classList.toggle('hit', hits.some(h => h.toLowerCase() === bw));
-    });
-  }
-});
 
 async function recalculateScores(grades) {
   const updates = S.players.map(p => {
@@ -445,7 +437,6 @@ const actions = {
       hands[p.id] = pool.slice(idx * perPlayer, (idx + 1) * perPlayer);
     });
 
-    await supabase.from('hub_items').delete().eq('room_code', CODE);
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
     const { error } = await supabase.rpc('hub_start_phase', {
       p_code: CODE,
@@ -456,47 +447,21 @@ const actions = {
     if (error) showError(error);
     refresh();
   },
-  async submit() {
-    if (S.room.status !== 'playing') return showError({ message: 'The game has ended.' });
-    const answers = {};
-    document.querySelectorAll('.explain-box').forEach(i => { answers[i.dataset.card] = i.value.trim(); });
-    if (Object.values(answers).every(v => !v)) return showError({ message: 'Please write at least one explanation before sending.' });
-    await supabase.from('hub_items').delete().eq('room_code', CODE).eq('player_id', me.id).eq('kind', 'explanations');
-    const { error } = await supabase.from('hub_items').insert([{ room_code: CODE, player_id: me.id, kind: 'explanations', data: { answers } }]);
-    if (error) showError(error);
-    refresh();
-  },
   async results() {
     await refresh();
-    const grades = { ...(st().grades || {}) };
-    if (!st().scored) {
-      S.players.forEach(p => {
-        const hand = (st().hands && st().hands[p.id]) || [];
-        const it = S.items.find(i => i.player_id === p.id);
-        const answers = (it && it.data && it.data.answers) || {};
-        hand.forEach(cid => {
-          const txt = answers[cid] || '';
-          const hits = findViolations(cid, txt);
-          grades[`${p.id}:${cid}`] = (txt.length >= 4 && hits.length === 0) ? 'valid' : 'invalid';
-        });
-      });
-      await recalculateScores(grades);
-      await patchRoom(CODE, { status: 'podium', grades, scored: true });
-    } else {
-      await patchRoom(CODE, { status: 'podium' });
-    }
+    await recalculateScores(st().grades || {});
+    await patchRoom(CODE, { status: 'podium', scored: true });
     refresh();
   },
   async clearnames() {
-    if (!confirm('Wash out all players (and their answers) and return to the lobby?')) return;
+    if (!confirm('Wash out all players and return to the lobby?')) return;
     const { error } = await supabase.from('hub_players').delete().eq('room_code', CODE);
     if (error) return showError(error);
     await patchRoom(CODE, { status: 'lobby', scored: false, hands: {}, grades: {}, ends_at: null });
     refresh();
   },
   async reset() {
-    if (!confirm('Reset the whole game? All explanations and scores will be deleted and everyone goes back to the lobby.')) return;
-    await supabase.from('hub_items').delete().eq('room_code', CODE);
+    if (!confirm('Reset the whole game? All scores will be cleared and everyone goes back to the lobby.')) return;
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
     await patchRoom(CODE, { status: 'lobby', scored: false, hands: {}, grades: {}, ends_at: null });
     refresh();
@@ -516,10 +481,16 @@ document.addEventListener('click', async e => {
   }
   const kk = e.target.closest('[data-kick]');
   if (kk) { kk.disabled = true; const { error } = await supabase.from('hub_players').delete().eq('id', kk.dataset.kick); if (error) showError(error); refresh(); return; }
-  const gr = e.target.closest('[data-grade]');
-  if (gr && hostMode) {
-    gr.disabled = true;
-    const grades = { ...(st().grades || {}), [gr.dataset.grade]: gr.dataset.val };
+  const tc = e.target.closest('[data-toggle-card]');
+  if (tc && hostMode) {
+    tc.disabled = true;
+    const key = tc.dataset.toggleCard;
+    const grades = { ...(st().grades || {}) };
+    const cur = grades[key] || 'none';
+    // Cycle: unmarked ('none') -> check ('valid') -> cross ('invalid') -> unmarked ('none')
+    if (cur === 'none') grades[key] = 'valid';
+    else if (cur === 'valid') grades[key] = 'invalid';
+    else delete grades[key];
     await recalculateScores(grades);
     await patchRoom(CODE, { grades });
     refresh();
@@ -532,7 +503,7 @@ document.addEventListener('click', async e => {
 try { const t0 = Date.now(); const { data } = await supabase.rpc('hub_now'); if (data) skew = new Date(data).getTime() - (t0 + Date.now()) / 2; } catch {}
 await ensureRoom(CODE, 'taboo', 'lobby', {});
 await refresh();
-subscribeRoom(CODE, { rooms: soon, players: soon, items: soon });
+subscribeRoom(CODE, { rooms: soon, players: soon });
 setInterval(refresh, 4000);
 </script>
 </body>
