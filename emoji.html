@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Emoji Guess</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#000; --fg:#fff; --red:#d42a1a; --redl:#ff6b5b; --gray:#5b6063; --dark:#1c1c1c; --muted:#b8bcbf; --ok:#4ade80; color-scheme: dark; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; border-top:10px solid var(--gray); }
+  body[data-phase=playing] { border-top-color:var(--red); } body[data-phase=podium] { border-top-color:#fff; }
+  main { max-width:760px; margin:0 auto; padding:56px 18px 90px; }
+  h1 { font-size:clamp(1.8rem,6vw,2.8rem); font-weight:800; margin:0 0 6px; line-height:1.05; }
+  h2 { font-size:1.3rem; margin:0 0 10px; }
+  .back { position:fixed; top:14px; left:10px; font:800 12px system-ui; background:#fff; color:#000; padding:5px 12px; border-radius:99px; text-decoration:none; z-index:5; }
+  .box { border:3px solid #fff; box-shadow:6px 6px 0 #3a3d3f; background:var(--dark); padding:18px; margin:18px 0; }
+  .muted { color:var(--muted); }
+  .chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .chip { border:2px solid #fff; padding:3px 10px; font-weight:800; background:var(--gray); }
+  button, input { font:inherit; color:inherit; }
+  button { cursor:pointer; border:3px solid #fff; background:transparent; font-weight:800; padding:10px 18px; }
+  button.main { background:var(--red); } button.main:disabled { opacity:.4; cursor:not-allowed; }
+  button:focus-visible, input:focus-visible { outline:3px solid var(--redl); outline-offset:2px; }
+  input[type=text], input[type=number] { width:100%; padding:10px; border:3px solid #fff; background:#000; }
+  input[type=number] { width:100px; }
+  .avs { display:grid; grid-template-columns:repeat(auto-fill,minmax(54px,1fr)); gap:8px; margin:10px 0 16px; }
+  .av { width:100%; aspect-ratio:1; display:flex; align-items:center; justify-content:center; padding:0; font-size:1.8rem; line-height:1; border:3px solid transparent; }
+  .av.on { border-color:#fff; background:var(--gray); }
+  .row { display:flex; gap:10px; align-items:center; margin:12px 0; flex-wrap:wrap; }
+  .tiles { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:12px 0; }
+  .tile { display:flex; flex-direction:column; align-items:center; gap:6px; padding:18px 8px; font-size:1.1rem; }
+  .tile .big { font-size:4rem; line-height:1; }
+  .tile.on { background:var(--red); }
+  .ecard { display:flex; align-items:center; gap:12px; margin:12px 0; padding:12px; border:3px solid #fff; background:#000; }
+  .ecard .num { font-weight:800; color:var(--muted); min-width:1.6em; }
+  .ecard .em { font-size:2.4rem; line-height:1; white-space:nowrap; }
+  .ecard input { flex:1; min-width:0; }
+  .timer { font-size:2.4rem; font-weight:800; font-variant-numeric:tabular-nums; }
+  .big { font-size:1.4rem; font-weight:800; }
+  .rank { display:flex; gap:12px; padding:10px 0; border-bottom:2px solid #fff; font-weight:800; font-size:1.15rem; }
+  .rank.me { background:var(--red); padding-left:8px; } .rank .s { margin-left:auto; }
+  .res { list-style:none; padding:0; margin:0; }
+  .res li { display:flex; gap:12px; align-items:center; padding:8px 10px; margin:6px 0; border-left:8px solid var(--redl); background:#000; }
+  .res li.ok { border-left-color:var(--ok); } .res .em { font-size:1.8rem; }
+  .fab { position:fixed; right:12px; bottom:12px; z-index:6; background:#000; box-shadow:4px 4px 0 #3a3d3f; }
+  .x { padding:2px 8px; border:none; font-size:1rem; }
+  .qr { display:inline-block; background:#fff; padding:12px; margin:6px 0; }
+  #err { position:fixed; left:0; right:0; bottom:0; background:#fde047; color:#000; padding:10px 16px; font-weight:500; display:none; z-index:9; }
+</style>
+</head>
+<body>
+<a class="back" href="./">← Games</a>
+<main><h1>Emoji Guess <small style="font-size:.9rem;font-weight:500">v1</small></h1><div id="app"><p class="muted">Loading…</p></div></main>
+<div id="err" role="alert"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import { supabase, ensureRoom, joinRoom, subscribeRoom, patchRoom, roomCodeFromUrl } from "./supabase.js";
+
+const CODE = roomCodeFromUrl("EMOJI-1001");
+const AV = ["🦊","🐼","🐸","🦄","🐙","🦁","🐯","🐵","🐧","🦉","🐢","🐳","🦋","🐝","🦖","👾"];
+const CATS = { countries: { icon: '🗺️', label: 'Countries', hint: 'Name the country' }, movies: { icon: '📋', label: 'Movies', hint: 'Name the movie' } };
+
+// emoji clue, display name, accepted alternatives (case, accents and a leading "the" are ignored)
+const RAW = {
+  countries: [
+    ['🥖🗼','France','francia'], ['🍕🍝','Italy','italia'], ['🍣🗻','Japan','japon'], ['🌴⚽','Brazil','brasil'],
+    ['🐪🔺','Egypt','egipto'], ['🗽🍔','United States','usa','us','america','united states of america','estados unidos','eeuu'],
+    ['🌮🌵','Mexico'], ['💃🥘','Spain','espana'], ['🍺🥨','Germany','alemania'], ['🐼🧧','China'],
+    ['🕌🍛','India'], ['🦘🏄','Australia'], ['🍁🦫','Canada'], ['🧉🥩','Argentina'], ['☕🦜','Colombia'],
+    ['🏛️🫒','Greece','grecia'], ['🌷🚲','Netherlands','holland','holanda','paises bajos'], ['🍫⛰️','Switzerland','suiza'],
+    ['💂☔','United Kingdom','uk','england','great britain','britain','reino unido','inglaterra'], ['🦙🏔️','Peru']
+  ],
+  movies: [
+    ['🦁👑','The Lion King','el rey leon'], ['🚢🧊','Titanic'], ['❄️👸','Frozen'], ['🦈🌊','Jaws','tiburon'],
+    ['🐠🔍','Finding Nemo','buscando a nemo'], ['🤠🚀','Toy Story'], ['⚡🧙','Harry Potter'],
+    ['🕷️🕸️','Spider-Man','spiderman','el hombre arana'], ['🧌🐴','Shrek'], ['🦖🌴','Jurassic Park','parque jurasico'],
+    ['⭐⚔️','Star Wars','guerra de las galaxias'], ['💊🕶️','The Matrix','matrix'], ['🧞🪔','Aladdin','aladin'],
+    ['🎈🏠👴','Up'], ['💀🎸','Coco'], ['🏠😱🎄','Home Alone','mi pobre angelito'], ['👻🚫','Ghostbusters','cazafantasmas'],
+    ['🦇🌃','Batman'], ['🌊🌺','Moana','vaiana'], ['🧜‍♀️🐚','The Little Mermaid','la sirenita']
+  ]
+};
+function norm(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^(the|a|an|el|la|los|las|le|les|l) /, '');
+}
+const CARDS = {};
+Object.entries(RAW).forEach(([cat, arr]) => arr.forEach((r, i) => { const id = cat[0] + i; CARDS[id] = { id, cat, e: r[0], n: r[1], keys: new Set(r.slice(1).concat(r[1]).map(norm)) }; }));
+const idsOf = cat => Object.values(CARDS).filter(c => c.cat === cat).map(c => c.id);
+
+function seeded(str) { let h = 1779033703 ^ str.length; for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; } return () => { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; }; }
+function shuffle(arr, rnd) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let sid; try { sid = localStorage.getItem('emoji_sid'); if (!sid) { sid = crypto.randomUUID(); localStorage.setItem('emoji_sid', sid); } } catch { sid = crypto.randomUUID(); }
+let hostMode = false;
+try { hostMode = localStorage.getItem('emoji_host_' + CODE) === '1' || new URLSearchParams(location.search).get('host') === '1'; } catch {}
+let S = { room: null, players: [], items: [] }, me = null, skew = 0, lastKey = '', pickedAv = AV[0], cat = 'countries';
+
+function showError(e) {
+  const t = $('#err'); if (!e) { t.style.display = 'none'; return; }
+  const m = e.message || String(e);
+  t.textContent = (/hub_|relation|schema|42P01|42501|PGRST|foreign key/.test(m + (e.code || '')) ? 'Database not ready: run add_emoji_game.sql (and setup_database.sql). ' : '') + m;
+  t.style.display = 'block';
+}
+async function refresh() {
+  const [r, p, i] = await Promise.all([
+    supabase.from('hub_rooms').select('*').eq('code', CODE).maybeSingle(),
+    supabase.from('hub_players').select('*').eq('room_code', CODE).order('joined_at'),
+    supabase.from('hub_items').select('*').eq('room_code', CODE).eq('kind', 'answers')
+  ]);
+  const err = r.error || p.error || i.error;
+  if (err) { showError(err); return; }
+  showError(null);
+  S = { room: r.data, players: p.data || [], items: i.data || [] };
+  me = S.players.find(x => x.session_id === sid) || null;
+  render();
+}
+let deb; const soon = () => { clearTimeout(deb); deb = setTimeout(refresh, 150); };
+
+const st = () => (S.room && S.room.state) || {};
+const deckIds = () => (st().deck || []).filter(id => CARDS[id]);
+const byId = id => S.players.find(p => p.id === id);
+const pTag = p => p ? `${esc(p.avatar || '🙂')} ${esc(p.name)}` : '?';
+const remaining = () => { const e = st().ends_at; return e ? Math.max(0, Math.ceil((new Date(e).getTime() - (Date.now() + skew)) / 1000)) : 0; };
+const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+const myOrder = () => shuffle(deckIds(), seeded(sid + '|' + st().ends_at));
+const isRight = (id, txt) => !!(txt && CARDS[id] && CARDS[id].keys.has(norm(txt)));
+const correctCount = ans => deckIds().filter(id => isRight(id, (ans || {})[id])).length;
+const myItem = () => me && S.items.find(i => i.player_id === me.id);
+
+function viewKey() {
+  if (!S.room) return 'none';
+  const sc = S.room.status === 'podium' ? S.players.reduce((a, p) => a + p.score, 0) + ':' + S.items.length : '';
+  return [S.room.status, hostMode, me && me.id, !!myItem(), st().ends_at, sc].join('|');
+}
+function render() {
+  if (!S.room) { $('#app').innerHTML = '<p class="muted">Could not open the room.</p>'; return; }
+  document.body.dataset.phase = S.room.status;
+  const k = viewKey();
+  if (k !== lastKey) { lastKey = k; $('#app').innerHTML = view(); qr(); }
+  light();
+}
+function light() {
+  const pl = $('#plist'); if (pl) pl.innerHTML = S.players.map(p => `<span class="chip">${pTag(p)}${hostMode ? ` <button class="x" data-kick="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}</span>`).join('') || '<i class="muted">Nobody yet…</i>';
+  const c = $('#count'); if (c) c.textContent = `${S.items.length}/${S.players.length} submitted`;
+  const sg = $('#startgame'); if (sg) sg.disabled = S.players.length < 1;
+  tick();
+}
+function qr() {
+  const el = $('#qr'); if (!el || el.dataset.done) return;
+  if (!window.QRCode) { el.textContent = '(QR unavailable: use the link)'; return; }
+  el.dataset.done = '1';
+  new QRCode(el, { text: location.origin + location.pathname + '?room=' + encodeURIComponent(CODE), width: 230, height: 230, colorDark: '#000000', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+}
+function tick() {
+  const t = $('#timer'); if (t) t.textContent = fmt(remaining());
+  const f = $('.ans');
+  if (f && !f.readOnly && S.room && S.room.status === 'playing' && st().ends_at && remaining() <= 0) lockPlay();
+}
+function lockPlay() {
+  document.querySelectorAll('.ans').forEach(el => { el.readOnly = true; el.style.opacity = '.7'; });
+  const b = document.querySelector('[data-act=submit]'); if (b) b.textContent = 'Send what I wrote';
+  const n = $('#late'); if (n) n.hidden = false;
+}
+setInterval(tick, 500);
+
+function view() {
+  const s = S.room.status;
+  if (hostMode) return hostView(s) + '<button class="ghost fab" data-act="reset">↺ Reset game</button>';
+  return me ? playerView(s) : joinView();
+}
+function joinView() {
+  return `<div class="box"><h2>Join room <code>${esc(CODE)}</code></h2>
+    <label for="nm"><b>Your name</b></label><input id="nm" type="text" maxlength="30" autocomplete="off">
+    <p><b>Your avatar</b></p><div class="avs">${AV.map(a => `<button type="button" class="av ${a === pickedAv ? 'on' : ''}" data-av="${a}" aria-label="Avatar ${a}">${a}</button>`).join('')}</div>
+    <button class="main" data-act="join">Join</button></div>
+    <p><button class="ghost" data-act="host">I'm the host (projector)</button></p>`;
+}
+function rankHtml() {
+  const n = deckIds().length;
+  const rows = S.players.map(p => { const it = S.items.find(i => i.player_id === p.id); return { p, ok: it ? correctCount(it.data.answers) : 0, t: it ? new Date(it.created_at).getTime() : Infinity }; })
+    .sort((a, b) => b.p.score - a.p.score || (a.t === b.t ? 0 : a.t < b.t ? -1 : 1));
+  return rows.map((r, i) => `<div class="rank ${me && r.p.id === me.id ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span><span>${pTag(r.p)}</span><span class="s">${r.p.score} pts · ${r.ok}/${n}</span></div>`).join('') || '<p class="muted">No players.</p>';
+}
+function hostView(s) {
+  const link = location.origin + location.pathname + '?room=' + encodeURIComponent(CODE);
+  const clear = '<button class="ghost" data-act="clearnames">🧽 Clear names</button>';
+  if (s === 'lobby') return `<div class="box"><h2>Room <code>${esc(CODE)}</code></h2>
+    <p class="muted">Scan the QR or go to:<br><b>${esc(link)}</b></p><div class="qr" id="qr"></div><h2>Players</h2><div class="chips" id="plist"></div></div>
+    <div class="box"><h2>Game panel</h2><p class="muted">1. Choose the category</p>
+    <div class="tiles">${Object.entries(CATS).map(([k, c]) => `<button class="tile ${k === cat ? 'on' : ''}" data-cat="${k}" aria-label="${c.label}"><span class="big">${c.icon}</span>${c.label}</button>`).join('')}</div>
+    <p class="muted">2. Set the cards and the time</p>
+    <div class="row"><label for="cnt"><b>Cards</b></label><input id="cnt" type="number" min="3" max="20" value="8">
+    <label for="secs"><b>Seconds</b></label><input id="secs" type="number" min="30" max="1800" value="180"></div>
+    <div class="row"><button class="main" id="startgame" data-act="start" disabled>Start game</button>${clear}</div>
+    <p class="muted">Up to 20 cards per category. Tap ✕ to remove one player, or 🧽 to remove everyone.</p></div>`;
+  if (s === 'playing') return `<div class="box"><h2>${CATS[st().category]?.icon || ''} ${CATS[st().category]?.label || ''}: ${deckIds().length} cards</h2>
+    <div class="timer" id="timer"></div><p class="big" id="count"></p></div><button class="main" data-act="results">Show results</button>`;
+  if (s === 'podium') return `<div class="box"><h2>🏆 Results</h2>${rankHtml()}</div>
+    <div class="box"><h2>Answer key</h2><ul class="res">${deckIds().map(id => `<li class="ok"><span class="em">${CARDS[id].e}</span> ${esc(CARDS[id].n)}</li>`).join('')}</ul></div>
+    <div class="row"><button class="main" data-act="reset">New game</button>${clear}</div>`;
+  return '<p class="muted">Waiting…</p>';
+}
+function playerView(s) {
+  const hello = `<p class="muted">Playing as ${pTag(me)}</p>`;
+  if (s === 'lobby') return `${hello}<div class="box"><h2>You're in 🎉</h2><p>Wait for the game to start.</p><div class="chips" id="plist"></div></div>`;
+  if (s === 'playing') {
+    if (myItem()) return `${hello}<div class="box"><h2>Sent ✓</h2><p>Wait for the host to show the results.</p><div class="timer" id="timer"></div></div>`;
+    const c = CATS[st().category] || CATS.countries;
+    return `${hello}<div class="box"><div class="timer" id="timer"></div><h2>${c.icon} ${c.hint}</h2>
+      <p id="late" class="big" hidden>⏰ Time's up. You can't keep writing, but you can send what you have.</p>
+      ${myOrder().map((id, i) => `<div class="ecard"><span class="num">${i + 1}.</span><span class="em">${CARDS[id].e}</span><input class="ans" data-card="${id}" type="text" maxlength="60" placeholder="${c.hint}" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Answer for card ${i + 1}"></div>`).join('')}
+      <button class="main" data-act="submit">Send</button></div>`;
+  }
+  if (s === 'podium') {
+    const it = myItem(), ans = it ? it.data.answers || {} : null;
+    const mine = ans ? `<div class="box"><h2>Your answers</h2><ul class="res">${myOrder().map(id => `<li class="${isRight(id, ans[id]) ? 'ok' : ''}"><span class="em">${CARDS[id].e}</span><span>${isRight(id, ans[id]) ? '✓' : '✗'} ${esc(ans[id] || '(empty)')}${isRight(id, ans[id]) ? '' : ` → <b>${esc(CARDS[id].n)}</b>`}</span></li>`).join('')}</ul></div>` : '<div class="box"><p>You did not send answers this round.</p></div>';
+    return `${hello}<div class="box"><h2>🏆 Results</h2>${rankHtml()}</div>${mine}`;
+  }
+  return `${hello}<p class="muted">Waiting…</p>`;
+}
+
+const actions = {
+  host() { try { localStorage.setItem('emoji_host_' + CODE, '1'); } catch {} hostMode = true; lastKey = ''; render(); },
+  async join() {
+    const name = $('#nm').value.trim(); if (!name) { $('#nm').focus(); return; }
+    const { error } = await joinRoom(CODE, sid, name, { avatar: pickedAv, status: 'joined' });
+    if (error) return showError(error);
+    refresh();
+  },
+  async start() {
+    const count = clamp(parseInt($('#cnt').value, 10) || 8, 3, idsOf(cat).length);
+    const secs = clamp(parseInt($('#secs').value, 10) || 180, 30, 1800);
+    const deck = shuffle(idsOf(cat), Math.random).slice(0, count);
+    await supabase.from('hub_items').delete().eq('room_code', CODE);
+    await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
+    const { error } = await supabase.rpc('hub_start_phase', { p_code: CODE, p_status: 'playing', p_secs: secs, p_reset: { category: cat, deck, count, scored: false } });
+    if (error) showError(error); refresh();
+  },
+  async submit() {
+    if (S.room.status !== 'playing') return showError({ message: 'The game has ended.' });
+    const answers = {}; document.querySelectorAll('.ans').forEach(i => { answers[i.dataset.card] = i.value.trim(); });
+    if (Object.values(answers).every(v => !v)) return showError({ message: 'There is nothing written to send.' });
+    await supabase.from('hub_items').delete().eq('room_code', CODE).eq('player_id', me.id).eq('kind', 'answers');
+    const { error } = await supabase.from('hub_items').insert([{ room_code: CODE, player_id: me.id, kind: 'answers', data: { answers } }]);
+    if (error) showError(error); refresh();
+  },
+  async results() {
+    await refresh();
+    if (!st().scored) {
+      const res = await Promise.all(S.players.map(p => { const it = S.items.find(i => i.player_id === p.id); return supabase.from('hub_players').update({ score: it ? correctCount(it.data.answers) * 100 : 0 }).eq('id', p.id); }));
+      const bad = res.find(r => r.error); if (bad) return showError(bad.error);
+      await patchRoom(CODE, { status: 'podium', scored: true });
+    } else await patchRoom(CODE, { status: 'podium' });
+    refresh();
+  },
+  async clearnames() {
+    if (!confirm('Remove all players (and their answers) and return to the lobby?')) return;
+    const { error } = await supabase.from('hub_players').delete().eq('room_code', CODE);
+    if (error) return showError(error);
+    await patchRoom(CODE, { status: 'lobby', scored: false, deck: [], ends_at: null }); refresh();
+  },
+  async reset() {
+    if (!confirm('Reset the whole game? All answers and scores will be deleted and everyone goes back to the lobby. Players stay in the room.')) return;
+    await supabase.from('hub_items').delete().eq('room_code', CODE);
+    await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
+    await patchRoom(CODE, { status: 'lobby', scored: false, deck: [], ends_at: null }); refresh();
+  }
+};
+document.addEventListener('click', async e => {
+  const av = e.target.closest('[data-av]');
+  if (av) { pickedAv = av.dataset.av; document.querySelectorAll('.av').forEach(b => b.classList.toggle('on', b === av)); return; }
+  const ct = e.target.closest('[data-cat]');
+  if (ct) { cat = ct.dataset.cat; document.querySelectorAll('.tile').forEach(b => b.classList.toggle('on', b === ct)); return; }
+  const kk = e.target.closest('[data-kick]');
+  if (kk) { kk.disabled = true; const { error } = await supabase.from('hub_players').delete().eq('id', kk.dataset.kick); if (error) showError(error); refresh(); return; }
+  const a = e.target.closest('[data-act]');
+  if (a && actions[a.dataset.act]) { a.disabled = true; try { await actions[a.dataset.act](); } finally { a.disabled = false; } }
+});
+
+try { const t0 = Date.now(); const { data } = await supabase.rpc('hub_now'); if (data) skew = new Date(data).getTime() - (t0 + Date.now()) / 2; } catch {}
+await ensureRoom(CODE, 'emoji', 'lobby', {});
+await refresh();
+subscribeRoom(CODE, { rooms: soon, players: soon, items: soon });
+setInterval(refresh, 4000);
+</script>
+</body>
+</html>
