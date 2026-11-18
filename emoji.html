@@ -56,6 +56,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import { supabase, ensureRoom, joinRoom, subscribeRoom, patchRoom, roomCodeFromUrl } from "./supabase.js";
+import { getSid, savedName, savedAvatar, rememberPlayer, recordScores, newRoundId } from "./scoreboard.js";
 
 const CODE = roomCodeFromUrl("EMOJI-1001");
 const AV = ["🦊","🐼","🐸","🦄","🐙","🦁","🐯","🐵","🐧","🦉","🐢","🐳","🦋","🐝","🦖","👾"];
@@ -93,10 +94,10 @@ const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let sid; try { sid = localStorage.getItem('emoji_sid'); if (!sid) { sid = crypto.randomUUID(); localStorage.setItem('emoji_sid', sid); } } catch { sid = crypto.randomUUID(); }
+const sid = getSid(); // same id in every game -> shared class scoreboard
 let hostMode = false;
 try { hostMode = localStorage.getItem('emoji_host_' + CODE) === '1' || new URLSearchParams(location.search).get('host') === '1'; } catch {}
-let S = { room: null, players: [], items: [] }, me = null, skew = 0, lastKey = '', pickedAv = AV[0], cat = 'countries';
+let S = { room: null, players: [], items: [] }, me = null, skew = 0, lastKey = '', pickedAv = AV.includes(savedAvatar()) ? savedAvatar() : AV[0], cat = 'countries';
 
 function showError(e) {
   const t = $('#err'); if (!e) { t.style.display = 'none'; return; }
@@ -173,7 +174,7 @@ function view() {
 }
 function joinView() {
   return `<div class="box"><h2>Join room <code>${esc(CODE)}</code></h2>
-    <label for="nm"><b>Your name</b></label><input id="nm" type="text" maxlength="30" autocomplete="off">
+    <label for="nm"><b>Your name</b></label><input id="nm" type="text" maxlength="30" autocomplete="off" value="${esc(savedName())}">
     <p><b>Your avatar</b></p><div class="avs">${AV.map(a => `<button type="button" class="av ${a === pickedAv ? 'on' : ''}" data-av="${a}" aria-label="Avatar ${a}">${a}</button>`).join('')}</div>
     <button class="main" data-act="join">Join</button></div>
     <p><button class="ghost" data-act="host">I'm the host (projector)</button></p>`;
@@ -228,6 +229,7 @@ const actions = {
     const name = $('#nm').value.trim(); if (!name) { $('#nm').focus(); return; }
     const { error } = await joinRoom(CODE, sid, name, { avatar: pickedAv, status: 'joined' });
     if (error) return showError(error);
+    rememberPlayer(name, pickedAv);
     refresh();
   },
   async start() {
@@ -236,7 +238,7 @@ const actions = {
     const deck = shuffle(idsOf(cat), Math.random).slice(0, count);
     await supabase.from('hub_items').delete().eq('room_code', CODE);
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
-    const { error } = await supabase.rpc('hub_start_phase', { p_code: CODE, p_status: 'playing', p_secs: secs, p_reset: { category: cat, deck, count, scored: false } });
+    const { error } = await supabase.rpc('hub_start_phase', { p_code: CODE, p_status: 'playing', p_secs: secs, p_reset: { category: cat, deck, count, scored: false, round_id: newRoundId() } });
     if (error) showError(error); refresh();
   },
   async submit() {
@@ -250,8 +252,10 @@ const actions = {
   async results() {
     await refresh();
     if (!st().scored) {
-      const res = await Promise.all(S.players.map(p => { const it = S.items.find(i => i.player_id === p.id); return supabase.from('hub_players').update({ score: it ? correctCount(it.data.answers) * 100 : 0 }).eq('id', p.id); }));
+      const pts = p => { const it = S.items.find(i => i.player_id === p.id); return it ? correctCount(it.data.answers) * 100 : 0; };
+      const res = await Promise.all(S.players.map(p => supabase.from('hub_players').update({ score: pts(p) }).eq('id', p.id)));
       const bad = res.find(r => r.error); if (bad) return showError(bad.error);
+      await recordScores('emoji', st().round_id || st().ends_at, S.players.map(p => ({ ...p, score: pts(p) })));
       await patchRoom(CODE, { status: 'podium', scored: true });
     } else await patchRoom(CODE, { status: 'podium' });
     refresh();
@@ -263,7 +267,7 @@ const actions = {
     await patchRoom(CODE, { status: 'lobby', scored: false, deck: [], ends_at: null }); refresh();
   },
   async reset() {
-    if (!confirm('Reset the whole game? All answers and scores will be deleted and everyone goes back to the lobby. Players stay in the room.')) return;
+    if (!confirm('Reset the whole game? All answers and scores of this game will be deleted and everyone goes back to the lobby. Players stay in the room. (Class scoreboard totals are kept.)')) return;
     await supabase.from('hub_items').delete().eq('room_code', CODE);
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
     await patchRoom(CODE, { status: 'lobby', scored: false, deck: [], ends_at: null }); refresh();
