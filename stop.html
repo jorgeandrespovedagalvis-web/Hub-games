@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" class="h-full">
+<html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -65,7 +65,7 @@
     </style>
 </head>
 <body class="bg-amber-50/30 text-black dark:bg-zinc-950 dark:text-white min-h-full flex flex-col justify-between transition-colors duration-200">
-    <a href="./" style="position:fixed;bottom:8px;left:8px;z-index:50;font:700 12px system-ui;background:#000;color:#fff;padding:4px 10px;border-radius:999px;text-decoration:none">← Juegos</a>
+    <a href="./" style="position:fixed;bottom:8px;left:8px;z-index:50;font:700 12px system-ui;background:#000;color:#fff;padding:4px 10px;border-radius:999px;text-decoration:none">← Games</a>
 
     <div class="max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8 flex-grow flex flex-col justify-between">
 
@@ -96,7 +96,7 @@
 
                 <!-- Botón de revisión de respuestas (solo host) -->
                 <button id="btn-review" onclick="openReviewModal()" class="host-only flex items-center gap-2 border-2 border-black dark:border-white px-3 py-1.5 font-bold bg-amber-300 hover:bg-amber-400 text-black transition-all text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5">
-                    ✅ Revisar respuestas
+                    ✅ Review answers
                 </button>
 
                 <!-- Language Selector -->
@@ -129,15 +129,15 @@
             </div>
 
             <div id="student-login-form" class="flex items-center gap-2 w-full sm:w-auto">
-                <input type="text" id="student-name-input" placeholder="Ingresa tu nombre..." class="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white px-3 py-1.5 text-sm font-bold focus:outline-none uppercase w-full sm:w-auto">
+                <input type="text" id="student-name-input" placeholder="Enter your name..." class="bg-white dark:bg-zinc-900 border-2 border-black dark:border-white px-3 py-1.5 text-sm font-bold focus:outline-none uppercase w-full sm:w-auto">
                 <button onclick="setStudentName()" class="bg-black text-white dark:bg-white dark:text-black font-black text-xs px-4 py-2 border-2 border-black dark:border-white hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors whitespace-nowrap">
-                    Unirme al Juego
+                    Join Game
                 </button>
             </div>
 
             <div id="student-logged-info" class="hidden flex items-center gap-3">
-                <span class="font-bold text-sm">Jugador: <span id="current-player-tag" class="font-black underline uppercase text-emerald-700 dark:text-emerald-400"></span></span>
-                <button onclick="changeStudentName()" class="text-xs underline font-bold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white">Cambiar</button>
+                <span class="font-bold text-sm">Player: <span id="current-player-tag" class="font-black underline uppercase text-emerald-700 dark:text-emerald-400"></span></span>
+                <button onclick="changeStudentName()" class="text-xs underline font-bold text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white">Change</button>
             </div>
         </div>
 
@@ -178,10 +178,10 @@
                 <!-- BOX 2: GAME START / STATUS -->
                 <div class="p-6 flex flex-col items-center justify-center bg-white dark:bg-zinc-950 flex-grow">
                     <button id="btn-start-game" onclick="startGameAction()" class="host-only w-full py-5 bg-emerald-500 hover:bg-emerald-600 text-black font-black text-xl uppercase tracking-wider border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2">
-                        <i data-lucide="play" class="w-6 h-6 fill-current"></i> ¡Iniciar Ronda!
+                        <i data-lucide="play" class="w-6 h-6 fill-current"></i> Start Round!
                     </button>
                     <div id="game-status-badge" class="font-mono text-sm font-bold uppercase tracking-wider text-zinc-500 text-center mt-3">
-                        Esperando que el Host inicie...
+                        Waiting for the host to start...
                     </div>
                 </div>
             </div>
@@ -212,7 +212,7 @@
                 <!-- Student Submit Button -->
                 <div id="student-submit-box" class="hidden p-4 border-t-4 border-black dark:border-white bg-zinc-50 dark:bg-zinc-900">
                     <button id="btn-student-submit" onclick="submitStudentAnswersAction()" class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-black text-xl uppercase tracking-wider border-2 border-black dark:border-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center justify-center gap-2">
-                        🛑 ¡STOP! / ENVIAR RESPUESTAS
+                        🛑 STOP! / SUBMIT ANSWERS
                     </button>
                 </div>
             </div>
@@ -267,7 +267,7 @@
                         🏆 Show Winner Podium
                     </button>
                     <button onclick="clearEntireRoom()" class="w-full py-2 px-3 border-2 border-black dark:border-white bg-rose-500 hover:bg-rose-600 text-white font-black uppercase text-xs shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all">
-                        🧹 Limpiar Sala Completa
+                        🧹 Clear Entire Room
                     </button>
                     <button id="btn-restart-round" onclick="restartGame()" class="w-full flex items-center justify-center gap-2 p-2 border-2 border-black dark:border-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-all group bg-white dark:bg-zinc-900">
                         <i data-lucide="rotate-ccw" class="w-4 h-4 group-hover:rotate-[-45deg] transition-transform"></i>
@@ -295,14 +295,14 @@
                 <!-- FULL LEADERBOARD TABLE (1 TO 6) -->
                 <div class="w-full border-2 border-black dark:border-white mt-4 bg-zinc-50 dark:bg-zinc-950 p-3">
                     <h4 class="font-black text-xs uppercase mb-2 flex items-center gap-2">
-                        <i data-lucide="list-ordered" class="w-4 h-4"></i> Top Classification (1º - 6º)
+                        <i data-lucide="list-ordered" class="w-4 h-4"></i> Top Ranking (1st – 6th)
                     </h4>
                     <div id="full-leaderboard-list" class="divide-y divide-black/10 dark:divide-white/10 text-xs font-mono max-h-40 overflow-y-auto">
                     </div>
                 </div>
 
                 <button onclick="closePodiumModal(); openReviewModal();" class="host-only mt-5 px-6 py-2.5 bg-amber-300 hover:bg-amber-400 text-black font-black uppercase text-xs border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                    ✅ Revisar respuestas
+                    ✅ Review answers
                 </button>
 
                 <button onclick="closePodiumModal()" class="mt-3 px-6 py-2.5 bg-black text-white dark:bg-white dark:text-black font-black uppercase text-xs border-2 border-black dark:border-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
@@ -317,11 +317,11 @@
                 <button onclick="closeReviewModal()" class="absolute top-3 right-4 font-black text-2xl hover:text-red-500">&times;</button>
 
                 <div class="flex flex-wrap items-center gap-3 mb-3 pr-8">
-                    <h2 class="text-2xl font-black tracking-tight">✅ Revisión de respuestas</h2>
-                    <span class="font-mono font-black text-sm border-2 border-black dark:border-white px-2 py-0.5">Letra: <span id="review-letter">J</span></span>
+                    <h2 class="text-2xl font-black tracking-tight">✅ Answer review</h2>
+                    <span class="font-mono font-black text-sm border-2 border-black dark:border-white px-2 py-0.5">Letter: <span id="review-letter">J</span></span>
                 </div>
                 <p class="text-xs text-zinc-600 dark:text-zinc-400 mb-3">
-                    Cada respuesta correcta vale 10 puntos. Haz clic en una respuesta para aceptarla o rechazarla. Verde = aceptada, rojo = rechazada (pasa el cursor para ver el motivo).
+                    Each correct answer is worth 10 points. Click an answer to accept or reject it. Green = accepted, red = rejected (hover to see the reason).
                 </p>
 
                 <div class="overflow-auto border-2 border-black dark:border-white flex-grow">
@@ -329,9 +329,9 @@
                 </div>
 
                 <div class="flex flex-wrap items-center justify-end gap-2 mt-4">
-                    <button onclick="closeReviewModal()" class="px-4 py-2 border-2 border-black dark:border-white bg-white dark:bg-zinc-900 font-black uppercase text-xs">Cerrar</button>
-                    <button onclick="saveReview(false)" class="px-4 py-2 border-2 border-black dark:border-white bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">💾 Guardar puntajes</button>
-                    <button onclick="saveReview(true)" class="px-4 py-2 border-2 border-black dark:border-white bg-amber-400 hover:bg-amber-500 text-black font-black uppercase text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">🏆 Guardar y ver podio</button>
+                    <button onclick="closeReviewModal()" class="px-4 py-2 border-2 border-black dark:border-white bg-white dark:bg-zinc-900 font-black uppercase text-xs">Close</button>
+                    <button onclick="saveReview(false)" class="px-4 py-2 border-2 border-black dark:border-white bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">💾 Save scores</button>
+                    <button onclick="saveReview(true)" class="px-4 py-2 border-2 border-black dark:border-white bg-amber-400 hover:bg-amber-500 text-black font-black uppercase text-xs shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">🏆 Save &amp; show podium</button>
                 </div>
             </div>
         </div>
@@ -354,7 +354,7 @@
                 <span id="lbl-footer-title">English / French Vocabulary Stop! Game</span>
             </div>
             <div class="flex items-center gap-3">
-                <span id="conn-status" class="font-mono font-bold text-zinc-500">● Conectando...</span>
+                <span id="conn-status" class="font-mono font-bold text-zinc-500">● Connecting...</span>
                 <span>Multiplayer Classroom Portal</span>
                 <span class="font-mono bg-black text-white dark:bg-white dark:text-black px-1.5 py-0.5">v5.5</span>
             </div>
@@ -364,15 +364,13 @@
     <!-- SUPABASE & MAIN ENGINE LOGIC SCRIPT -->
     <script type="module">
         import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, roomCodeFromUrl } from "./supabase.js";
+        import { getSid, savedName, rememberPlayer, recordScores, newRoundId } from "./scoreboard.js";
         window.supabaseClient = supabase;
         const roomId = roomCodeFromUrl("ROOM-1001");
         window.roomId = roomId;
 
-        let sessionUuid = localStorage.getItem('STOP_SESSION_UUID');
-        if (!sessionUuid) {
-            sessionUuid = 'sess-' + Math.random().toString(36).substring(2, 11);
-            localStorage.setItem('STOP_SESSION_UUID', sessionUuid);
-        }
+        // Same device id in every game, so the class scoreboard can add up points
+        const sessionUuid = getSid();
 
         const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
@@ -413,6 +411,7 @@
         let currentStudentName = '';
         let connectedPlayersListCache = [];
         let hasSubmitted = false;
+        let roundId = 'r0';
 
         /* ------------------------------------------------------------------ */
         /*  INICIO                                                             */
@@ -430,10 +429,10 @@
                 renderCategories();
             }
 
-            const savedName = localStorage.getItem('STOP_STUDENT_NAME');
-            if (savedName) {
-                currentStudentName = savedName;
-                document.getElementById('student-name-input').value = savedName;
+            const knownName = localStorage.getItem('STOP_STUDENT_NAME') || savedName().toUpperCase();
+            if (knownName) {
+                currentStudentName = knownName;
+                document.getElementById('student-name-input').value = knownName;
                 updateStudentUIState();
             }
 
@@ -517,11 +516,12 @@
             const input = document.getElementById('student-name-input');
             const val = input.value.trim().toUpperCase();
             if (!val) {
-                alert("Por favor ingresa tu nombre.");
+                alert("Please enter your name.");
                 return;
             }
             currentStudentName = val;
             localStorage.setItem('STOP_STUDENT_NAME', currentStudentName);
+            rememberPlayer(input.value.trim());
 
             updateStudentUIState();
             await registerPlayerInSupabase(currentStudentName);
@@ -554,7 +554,7 @@
                         { room_code: roomId, session_id: sessionUuid, name: name, status: 'Joined', score: 0 }
                     ], { onConflict: 'room_code,session_id' });
 
-                if (error) reportError('registrar al jugador', error);
+                if (error) reportError('registering the player', error);
                 else fetchAndRenderPlayers();
             } catch (e) {
                 console.warn("Excepción al registrar jugador:", e);
@@ -575,7 +575,7 @@
         }
 
         window.clearEntireRoom = async function() {
-            if (confirm("¿Estás seguro de limpiar toda la sala y expulsar a los jugadores actuales?")) {
+            if (confirm("Are you sure you want to clear the whole room and remove all current players?")) {
                 try {
                     await supabase.from('hub_players').delete().eq('room_code', roomId);
                     fetchAndRenderPlayers();
@@ -589,7 +589,8 @@
         /*  ESTADO DE LA SALA (rooms)                                          */
         /* ------------------------------------------------------------------ */
         const flattenRoom = r => r ? ({ room_id: r.code, status: r.status,
-            letter: (r.state || {}).letter, lang: (r.state || {}).lang, cat_count: (r.state || {}).cat_count }) : r;
+            letter: (r.state || {}).letter, lang: (r.state || {}).lang, cat_count: (r.state || {}).cat_count,
+            round_id: (r.state || {}).round_id }) : r;
 
         async function fetchRoomState() {
             const { data, error } = await supabase
@@ -599,7 +600,7 @@
                 .maybeSingle();
 
             if (error) {
-                reportError('leer la sala', error);
+                reportError('reading the room', error);
                 return;
             }
 
@@ -621,6 +622,7 @@
             gameStatus = d.status || 'waiting';
             currentLang = d.lang || 'en';
             activeCategoriesCount = d.cat_count || 8;
+            roundId = d.round_id || 'r0';
 
             document.getElementById('active-letter-display').textContent = activeLetter;
             document.getElementById('alphabet-select').value = activeLetter;
@@ -643,20 +645,20 @@
             const { data, error } = await supabase.rpc('hub_patch_room',
                 { p_code: roomId, p_status: status ?? null, p_state: state });
             if (error) {
-                reportError('actualizar la sala', error);
+                reportError('updating the room', error);
             } else if (!data) {
-                reportError('actualizar la sala', { message: 'No se modificó ninguna fila: la sala no existe o no hay permiso.' });
+                reportError('updating the room', { message: 'No row was changed: the room does not exist or there is no permission.' });
             }
         }
 
         let errorAlerted = false;
         function reportError(ctx, error) {
-            console.error('Error al ' + ctx + ':', error);
+            console.error('Error while ' + ctx + ':', error);
             const code = error && error.code ? ' (' + error.code + ')' : '';
-            setConnStatus(false, 'Error al ' + ctx + code);
+            setConnStatus(false, 'Error while ' + ctx + code);
             if (error && error.code === '42501' && !errorAlerted) {
                 errorAlerted = true;
-                alert('Supabase bloqueó el acceso (error 42501). Faltan los GRANT sobre las tablas hub_rooms y hub_players. Ejecuta 01_hub_schema.sql en Supabase.');
+                alert('Supabase blocked access (error 42501). The GRANTs on hub_rooms and hub_players are missing. Run setup_database.sql in Supabase.');
             }
         }
 
@@ -747,19 +749,20 @@
             hasSubmitted = false;
             updateGameStatusUI();
             renderCategories(true);
-            await updateRoomInSupabase({ status: 'playing' });
+            roundId = newRoundId();
+            await updateRoomInSupabase({ status: 'playing', round_id: roundId });
         }
 
         function updateGameStatusUI() {
             const badge = document.getElementById('game-status-badge');
             if (gameStatus === 'playing') {
-                badge.textContent = "¡JUEGO EN CURSO! Escribe rápido.";
+                badge.textContent = "GAME IN PROGRESS! Write fast.";
                 badge.className = "font-mono text-sm font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 text-center mt-3 animate-pulse";
             } else if (gameStatus === 'stopped') {
-                badge.textContent = "¡RONDA FINALIZADA (STOP)!";
+                badge.textContent = "ROUND OVER (STOP)!";
                 badge.className = "font-mono text-sm font-bold uppercase tracking-wider text-red-600 text-center mt-3";
             } else {
-                badge.textContent = "Esperando que el Host inicie...";
+                badge.textContent = "Waiting for the host to start...";
                 badge.className = "font-mono text-sm font-bold uppercase tracking-wider text-zinc-500 text-center mt-3";
             }
         }
@@ -793,7 +796,7 @@
                         <span class="font-bold text-xs uppercase truncate">${cat.name}</span>
                     </div>
                     <div class="w-2/3">
-                        <input type="text" id="cat-input-${cat.id}" placeholder="${gameStatus === 'playing' ? 'Con ' + activeLetter + '...' : 'Esperando inicio...'}"
+                        <input type="text" id="cat-input-${cat.id}" placeholder="${gameStatus === 'playing' ? 'Starts with ' + activeLetter + '...' : 'Waiting to start...'}"
                             oninput="sanitizeInput(this)" onblur="markInput(this)" maxlength="30"
                             autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false"
                             class="w-full bg-zinc-50 dark:bg-zinc-900 border-2 border-black dark:border-white px-3 py-1.5 text-sm font-mono uppercase font-bold focus:outline-none focus:bg-white disabled:opacity-50 disabled:bg-zinc-200 dark:disabled:bg-zinc-900"
@@ -829,22 +832,22 @@
 
             if (!wordRegex(currentLang).test(word)) {
                 return { ok: false, reason: currentLang === 'en'
-                    ? 'solo letras del inglés (A-Z), sin números ni símbolos'
-                    : 'solo letras del francés, sin números ni símbolos' };
+                    ? 'English letters only (A-Z), no numbers or symbols'
+                    : 'French letters only, no numbers or symbols' };
             }
 
             const letters = word.replace(/[ '’-]/g, '');
-            if (letters.length < 3) return { ok: false, reason: 'mínimo 3 letras' };
+            if (letters.length < 3) return { ok: false, reason: 'at least 3 letters' };
 
             const vowelTest = new RegExp(`[${VOWELS}]`);
             const consonantRun = new RegExp(`[^${VOWELS}]{6,}`);
             const vowelRun = new RegExp(`[${VOWELS}]{5,}`);
 
             for (const seg of word.split(SEPARATORS)) {
-                if (seg.length >= 2 && !vowelTest.test(seg)) return { ok: false, reason: 'no parece una palabra (sin vocales)' };
-                if (/(.)\1{2,}/.test(seg)) return { ok: false, reason: 'no parece una palabra (letra repetida 3 veces)' };
-                if (consonantRun.test(seg)) return { ok: false, reason: 'no parece una palabra (demasiadas consonantes seguidas)' };
-                if (vowelRun.test(seg)) return { ok: false, reason: 'no parece una palabra (demasiadas vocales seguidas)' };
+                if (seg.length >= 2 && !vowelTest.test(seg)) return { ok: false, reason: 'does not look like a word (no vowels)' };
+                if (/(.)\1{2,}/.test(seg)) return { ok: false, reason: 'does not look like a word (same letter 3 times)' };
+                if (consonantRun.test(seg)) return { ok: false, reason: 'does not look like a word (too many consonants in a row)' };
+                if (vowelRun.test(seg)) return { ok: false, reason: 'does not look like a word (too many vowels in a row)' };
             }
             return { ok: true };
         }
@@ -915,18 +918,19 @@
                 .eq('session_id', sessionUuid);
 
             if (error) console.error("Error al guardar respuestas:", error);
+            else recordScores('stop', roundId, [{ session_id: sessionUuid, name: currentStudentName, score: scoreEarned }]);
             return { error, scoreEarned, invalidWordsCount };
         }
 
         window.submitStudentAnswersAction = async function() {
             if (!currentStudentName) {
-                alert("¡Primero debes ingresar tu nombre en la parte superior!");
+                alert("First enter your name at the top!");
                 document.getElementById('student-name-input').focus();
                 return;
             }
 
             if (gameStatus !== 'playing') {
-                alert("El juego no está activo en este momento.");
+                alert("The game is not active right now.");
                 return;
             }
 
@@ -940,7 +944,7 @@
                 if (!r.ok) problems.push(`• ${cat.name}: ${r.reason}`);
             });
             if (problems.length > 0) {
-                alert("⛔ No puedes enviar todavía. Corrige estas casillas (marcadas en rojo) o déjalas vacías:\n\n" + problems.join("\n"));
+                alert("⛔ You cannot submit yet. Fix these boxes (marked in red) or leave them empty:\n\n" + problems.join("\n"));
                 return;
             }
 
@@ -948,12 +952,12 @@
                 const { error, scoreEarned, invalidWordsCount } = await saveStudentAnswers();
 
                 if (error) {
-                    alert("Error al enviar respuestas.");
+                    alert("Error while submitting your answers.");
                     return;
                 }
 
                 if (invalidWordsCount > 0) {
-                    alert(`⚠️ Hay ${invalidWordsCount} palabra(s) que no son válidas (mínimo 3 letras, mezclando vocales y consonantes). No contarán puntos.`);
+                    alert(`⚠️ ${invalidWordsCount} word(s) are not valid (at least 3 letters, mixing vowels and consonants). They will not score points.`);
                 }
 
                 hasSubmitted = true;
@@ -966,7 +970,7 @@
 
                 await fetchAndRenderPlayers();
                 showPodiumModalUI(true);
-                alert(`🚨 ¡STOP! Fuiste el primero en enviar. ¡Fin de la ronda! Puntuación: ${scoreEarned} pts`);
+                alert(`🚨 STOP! You were the first to submit. The round is over! Score: ${scoreEarned} pts`);
             } catch (e) {
                 console.error(e);
             }
@@ -977,7 +981,7 @@
             updateGameStatusUI();
             renderCategories();
             await updateRoomInSupabase({ status: 'stopped' });
-            alert("🛑 ¡STOP manual activado por el Host!");
+            alert("🛑 Manual STOP triggered by the host!");
             await fetchAndRenderPlayers();
             showPodiumModalUI(true);
         }
@@ -993,7 +997,7 @@
                 .order('score', { ascending: false });
 
             if (error) {
-                reportError('leer los jugadores', error);
+                reportError('reading the players', error);
                 return;
             }
 
@@ -1061,8 +1065,8 @@
                     })
                 .subscribe(status => {
                     console.log('Realtime rooms:', status);   // debe decir SUBSCRIBED
-                    if (status === 'SUBSCRIBED') setConnStatus(true, 'En vivo');
-                    else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setConnStatus(false, 'Sin conexión en vivo');
+                    if (status === 'SUBSCRIBED') setConnStatus(true, 'Live');
+                    else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') setConnStatus(false, 'No live connection');
                 });
         }
 
@@ -1127,11 +1131,11 @@
         // Juicio automático de una respuesta
         function autoJudge(word) {
             const w = (word || '').trim().toUpperCase();
-            if (!w) return { ok: false, empty: true, reason: 'Sin respuesta' };
+            if (!w) return { ok: false, empty: true, reason: 'No answer' };
             const r = validateWord(w);
-            if (!r.ok) return { ok: false, reason: 'Rechazada: ' + r.reason };
-            if (!startsWithActiveLetter(w)) return { ok: false, reason: 'Rechazada: no empieza con ' + activeLetter };
-            return { ok: true, reason: 'Aceptada' };
+            if (!r.ok) return { ok: false, reason: 'Rejected: ' + r.reason };
+            if (!startsWithActiveLetter(w)) return { ok: false, reason: 'Rejected: does not start with ' + activeLetter };
+            return { ok: true, reason: 'Accepted' };
         }
 
         // Estado final de una casilla: cambio sin guardar > revisión guardada > automático
@@ -1152,7 +1156,7 @@
             const players = [...connectedPlayersListCache];
 
             if (players.length === 0) {
-                table.innerHTML = `<tbody><tr><td class="p-6 text-center text-zinc-500 italic">Todavía no hay jugadores en la sala.</td></tr></tbody>`;
+                table.innerHTML = `<tbody><tr><td class="p-6 text-center text-zinc-500 italic">There are no players in the room yet.</td></tr></tbody>`;
                 return;
             }
 
@@ -1181,7 +1185,7 @@
                                     class="w-full text-left px-2 py-1.5 border-2 font-mono font-bold uppercase"
                                     style="${style}">
                                 ${ok ? '✓' : '✗'} ${escapeHtml(word)}
-                                ${!ok && reason ? `<span class="block font-sans font-normal normal-case text-[10px] opacity-80">${escapeHtml(reason.replace('Rechazada: ', ''))}</span>` : ''}
+                                ${!ok && reason ? `<span class="block font-sans font-normal normal-case text-[10px] opacity-80">${escapeHtml(reason.replace('Rejected: ', ''))}</span>` : ''}
                             </button>
                         </td>`;
                 }).join('');
@@ -1191,7 +1195,7 @@
                     <tr>
                         <td class="p-2 border border-black/20 dark:border-white/20 font-black whitespace-nowrap sticky left-0 bg-white dark:bg-zinc-900">
                             ${escapeHtml(p.name)}
-                            ${sent ? '' : '<span class="block text-[10px] font-normal text-zinc-500">sin enviar</span>'}
+                            ${sent ? '' : '<span class="block text-[10px] font-normal text-zinc-500">not submitted</span>'}
                         </td>
                         ${cells}
                         <td class="p-2 border border-black/20 dark:border-white/20 font-mono font-black text-center bg-emerald-100 text-emerald-900">${total}</td>
@@ -1201,7 +1205,7 @@
             table.innerHTML = `
                 <thead>
                     <tr>
-                        <th class="p-2 border border-black/20 dark:border-white/20 bg-zinc-100 dark:bg-zinc-800 font-black uppercase text-left sticky left-0">Jugador</th>
+                        <th class="p-2 border border-black/20 dark:border-white/20 bg-zinc-100 dark:bg-zinc-800 font-black uppercase text-left sticky left-0">Player</th>
                         ${headCells}
                         <th class="p-2 border border-black/20 dark:border-white/20 bg-zinc-100 dark:bg-zinc-800 font-black uppercase">Pts</th>
                     </tr>
@@ -1247,21 +1251,22 @@
                         .update({ score: score, data: { answers: answers } })
                         .eq('id', p.id);
                     if (error) {
-                        reportError('guardar la revisión', error);
-                        alert("No se pudieron guardar los puntajes. Revisa el pie de página para ver el error.");
+                        reportError('saving the review', error);
+                        alert("The scores could not be saved. Check the footer to see the error.");
                         return;
                     }
                 }
 
                 reviewOverrides = {};
                 await fetchAndRenderPlayers();
+                await recordScores('stop', roundId, connectedPlayersListCache);
                 renderReviewTable();
 
                 if (showPodium) {
                     closeReviewModal();
                     showPodiumModalUI(true);
                 } else {
-                    alert("✅ Puntajes guardados.");
+                    alert("✅ Scores saved.");
                 }
             } catch (e) {
                 console.error(e);
@@ -1273,7 +1278,7 @@
         }
 
         window.restartGame = async function() {
-            if (confirm("¿Reiniciar la ronda y limpiar puntajes y respuestas?")) {
+            if (confirm("Restart the round and clear this round's scores and answers? (Class scoreboard totals are kept.)")) {
                 try {
                     hasSubmitted = false;
                     gameStatus = 'waiting';
@@ -1297,15 +1302,15 @@
         }
 
         window.updateQRCode = function() {
-            const joinUrl = window.location.origin + window.location.pathname + '?role=student';
+            const joinUrl = window.location.origin + window.location.pathname + '?role=student&room=' + encodeURIComponent(roomId);
             const qrImg = document.getElementById('qr-code-img');
             qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(joinUrl)}`;
         }
 
         window.copyJoinLink = function() {
-            const joinUrl = window.location.origin + window.location.pathname + '?role=student';
+            const joinUrl = window.location.origin + window.location.pathname + '?role=student&room=' + encodeURIComponent(roomId);
             navigator.clipboard.writeText(joinUrl);
-            alert("¡Enlace de invitación copiado al portapapeles!");
+            alert("Join link copied to the clipboard!");
         }
     </script>
 </body>
