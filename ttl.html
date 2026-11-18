@@ -57,12 +57,13 @@
 </style>
 </head>
 <body>
-<a class="back" href="./">← Juegos</a>
-<main><h1>Two Truths and a Lie <small style="font-size:.9rem;font-weight:500">v7</small></h1><div id="app"><p class="muted">Cargando…</p></div></main>
+<a class="back" href="./">← Games</a>
+<main><h1>Two Truths and a Lie <small style="font-size:.9rem;font-weight:500">v7</small></h1><div id="app"><p class="muted">Loading…</p></div></main>
 <div id="err" role="alert"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import { supabase, ensureRoom, joinRoom, subscribeRoom, patchRoom, roomCodeFromUrl } from "./supabase.js";
+import { getSid, savedName, savedAvatar, rememberPlayer, recordScores, newRoundId } from "./scoreboard.js";
 
 const CODE = roomCodeFromUrl("TTL-1001");
 const AV = ["🦊","🐼","🐸","🦄","🐙","🦁","🐯","🐵","🐧","🦉","🐢","🐳","🦋","🐝","🦖","👾"];
@@ -70,10 +71,10 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LET = 'ABC';
 
-let sid; try { sid = localStorage.getItem('ttl_sid'); if (!sid) { sid = crypto.randomUUID(); localStorage.setItem('ttl_sid', sid); } } catch { sid = crypto.randomUUID(); }
+const sid = getSid(); // same id in every game -> shared class scoreboard
 let hostMode = false;
 try { hostMode = localStorage.getItem('ttl_host_' + CODE) === '1' || new URLSearchParams(location.search).get('host') === '1'; } catch {}
-let S = { room:null, players:[], items:[], votes:[] }, me = null, skew = 0, lastKey = '', pickedAv = AV[0];
+let S = { room:null, players:[], items:[], votes:[] }, me = null, skew = 0, lastKey = '', pickedAv = AV.includes(savedAvatar()) ? savedAvatar() : AV[0];
 
 function showError(e) {
   const t = $('#err'); if (!e) { t.style.display = 'none'; return; }
@@ -163,7 +164,7 @@ function view() {
 
 function joinView() {
   return `<div class="box"><h2>Join room <code>${esc(CODE)}</code></h2>
-    <label for="nm"><b>Your name</b></label><input id="nm" type="text" maxlength="30" autocomplete="off">
+    <label for="nm"><b>Your name</b></label><input id="nm" type="text" maxlength="30" autocomplete="off" value="${esc(savedName())}">
     <p><b>Your avatar</b></p><div class="avs">${AV.map(a => `<button type="button" class="av ${a === pickedAv ? 'on' : ''}" data-av="${a}" aria-label="Avatar ${a}">${a}</button>`).join('')}</div>
     <button class="main" data-act="join">Join</button></div>
     <p><button class="ghost" data-act="host">I'm the host (projector)</button></p>`;
@@ -256,7 +257,15 @@ async function revealItem(id) {
     const bad = res.find(r => r.error); if (bad) { showError(bad.error); return; }
   }
   await patchRoom(CODE, { revealed: [...new Set([...rv, id])], scored: [...new Set([...done, id])] });
-  refresh();
+  await refresh();
+  // Ledger gets only THIS round's points (TTL scores keep adding up between rounds)
+  const scoredIds = st().scored || [];
+  const roundPts = pid => S.items.filter(it => scoredIds.includes(it.id)).reduce((sum, it) => {
+    const vs = votesFor(it.id), lie = it.data.lie_index;
+    if (it.player_id === pid) return sum + 50 * vs.filter(v => v.data.guess !== lie).length;
+    return sum + (vs.some(v => v.voter_id === pid && v.data.guess === lie) ? 100 : 0);
+  }, 0);
+  await recordScores('ttl', st().round_id || st().ends_at, S.players.map(p => ({ ...p, score: roundPts(p.id) })));
 }
 const actions = {
   host() { try { localStorage.setItem('ttl_host_' + CODE, '1'); } catch {} hostMode = true; lastKey = ''; render(); },
@@ -264,12 +273,13 @@ const actions = {
     const name = $('#nm').value.trim(); if (!name) { $('#nm').focus(); return; }
     const { error } = await joinRoom(CODE, sid, name, { avatar: pickedAv, status: 'joined' });
     if (error) return showError(error);
+    rememberPlayer(name, pickedAv);
     refresh();
   },
   async startwrite() {
     const secs = Math.min(900, Math.max(30, parseInt($('#secs').value, 10) || 120));
     await supabase.from('hub_items').delete().eq('room_code', CODE);
-    const { error } = await supabase.rpc('hub_start_phase', { p_code: CODE, p_status: 'writing', p_secs: secs, p_reset: { revealed: [], scored: [] } });
+    const { error } = await supabase.rpc('hub_start_phase', { p_code: CODE, p_status: 'writing', p_secs: secs, p_reset: { revealed: [], scored: [], round_id: newRoundId() } });
     if (error) showError(error); refresh();
   },
   async submit() {
@@ -297,7 +307,7 @@ const actions = {
     await patchRoom(CODE, { status: 'lobby', revealed: [], scored: [], ends_at: null }); refresh();
   },
   async reset() {
-    if (!confirm('Reset the whole game? All statements, votes and scores will be deleted and everyone goes back to the lobby. Players stay in the room.')) return;
+    if (!confirm('Reset the whole game? All statements, votes and scores of this game will be deleted and everyone goes back to the lobby. Players stay in the room. (Class scoreboard totals are kept.)')) return;
     await supabase.from('hub_items').delete().eq('room_code', CODE);
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
     await patchRoom(CODE, { status: 'lobby', revealed: [], scored: [], ends_at: null }); refresh();
