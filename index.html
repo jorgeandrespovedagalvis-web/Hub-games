@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Juegos de clase</title>
+<title>Class Games</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
@@ -41,6 +41,27 @@
   .c0 .go { background:var(--bg); }
   .soon { filter:grayscale(1); opacity:.5; box-shadow:none !important; border-style:dashed; }
   .soon .go { background:transparent; color:inherit; border:2px solid currentColor; }
+  .score { margin-top:44px; border:3px solid #fff; background:var(--dark); box-shadow:6px 6px 0 var(--shadow); padding:20px; }
+  .score h2 { margin:0 0 4px; font-size:1.6rem; font-weight:800; }
+  .score .tools { display:flex; flex-wrap:wrap; gap:10px; margin:14px 0; }
+  .btn { font:inherit; font-weight:800; cursor:pointer; padding:8px 14px; border:2px solid #fff; background:transparent; color:#fff; }
+  .btn.red { background:var(--red); }
+  .btn:focus-visible { outline:3px solid var(--red-l); outline-offset:2px; }
+  .tbl-wrap { overflow-x:auto; }
+  table.sb { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  .sb th, .sb td { padding:8px 10px; border-bottom:2px solid var(--gray); text-align:right; white-space:nowrap; }
+  .sb th:nth-child(-n+2), .sb td:nth-child(-n+2) { text-align:left; }
+  .sb th { color:var(--red-l); text-transform:uppercase; font-size:.8rem; letter-spacing:.06em; }
+  .sb td.tot { font-weight:800; font-size:1.15rem; }
+  .sb tr.top td { background:#2a2a2a; }
+  #final { position:fixed; inset:0; background:rgba(0,0,0,.97); display:none; align-items:center; justify-content:center; z-index:20; padding:20px; }
+  #final.on { display:flex; }
+  .final-box { max-width:720px; width:100%; text-align:center; }
+  .final-box h2 { font-size:clamp(2rem,6vw,3.4rem); margin:0 0 20px; }
+  .pod { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; align-items:end; margin-bottom:22px; }
+  .pod div { border:3px solid #fff; padding:12px 6px; font-weight:800; }
+  .pod .p1 { background:var(--red); min-height:200px; } .pod .p2 { background:var(--gray); min-height:150px; } .pod .p3 { background:var(--dark); min-height:115px; }
+  .pod .nm { font-size:1.2rem; display:block; margin:6px 0; overflow-wrap:anywhere; } .pod .med { font-size:2.4rem; }
   footer { border-top:4px solid var(--gray); padding:14px 0 28px; color:var(--muted); font-size:.9rem; }
   footer b { color:var(--red-l); }
 </style>
@@ -48,30 +69,50 @@
 <body>
 <header>
   <div class="wrap">
-    <span class="kicker">Material de clase</span>
-    <h1>Juegos de clase</h1>
-    <p class="sub">Elige un juego. Los estudiantes entran desde este mismo enlace.</p>
+    <span class="kicker">Class material</span>
+    <h1>Class Games</h1>
+    <p class="sub">Pick a game. Students join from this same link. Points from every game add up on the class scoreboard.</p>
   </div>
 </header>
 <main class="wrap">
   <div id="warn"></div>
   <div class="bar">
-    <label for="room">Sala</label>
-    <input id="room" placeholder="ROOM-1001 (por defecto)" autocomplete="off" maxlength="40">
-    <span class="status" id="status" role="status">Lista local</span>
+    <label for="room">Room</label>
+    <input id="room" placeholder="ROOM-1001 (default)" autocomplete="off" maxlength="40">
+    <span class="status" id="status" role="status">Local list</span>
   </div>
   <div class="grid" id="grid"></div>
+
+  <section class="score" aria-labelledby="sb-title">
+    <h2 id="sb-title">🏆 Class scoreboard</h2>
+    <p style="margin:0;color:var(--muted)">Points from every game are kept here while you switch games. Students use the same name on their phones, and their points add up automatically.</p>
+    <div class="tools">
+      <button class="btn red" id="sb-final">🎉 End class: final podium</button>
+      <button class="btn" id="sb-refresh">↻ Refresh</button>
+      <button class="btn" id="sb-reset">🧹 New class (reset totals)</button>
+    </div>
+    <div class="tbl-wrap"><table class="sb" id="sb-table"><tbody><tr><td style="text-align:left;color:var(--muted)">Loading…</td></tr></tbody></table></div>
+  </section>
 </main>
-<footer><div class="wrap"><b>●</b> Página madre del material de clase. Aquí se irán sumando los nuevos juegos.</div></footer>
+<div id="final" role="dialog" aria-modal="true" aria-labelledby="final-title">
+  <div class="final-box">
+    <h2 id="final-title">🏆 Class champions</h2>
+    <div class="pod" id="final-pod"></div>
+    <div class="tbl-wrap"><table class="sb" id="final-table"></table></div>
+    <p><button class="btn red" id="final-close" style="margin-top:18px">Close</button></p>
+  </div>
+</div>
+<footer><div class="wrap"><b>●</b> Main page for the class material. New games will be added here.</div></footer>
 <script>
   // 1) Built-in catalog: the menu always works, even offline or without the database.
   var CATALOG = [
-    { id:'stop',  title:'STOP!', description:'Scattergories de vocabulario en inglés y francés.', emoji:'🛑', color:'#fb7185', path:'stop.html',  enabled:true, sort_order:10 },
-    { id:'ttl',   title:'Two Truths and a Lie', description:'Escribe dos verdades y una mentira; el grupo adivina.', emoji:'🤥', color:'#38bdf8', path:'ttl.html',   enabled:true, sort_order:20 },
-    { id:'emoji', title:'Emoji Guess', description:'Adivina el país o la película a partir de los emojis.', emoji:'🧩', color:'#4ade80', path:'emoji.html', enabled:true, sort_order:30 },
-    { id:'taboo', title:'Forbidden Words', description:'Describe advanced verbs and objects without using restricted words.', emoji:'🚫', color:'#f97316', path:'taboo.html', enabled:true, sort_order:40 }
+    { id:'stop',  title:'STOP!', description:'Vocabulary Scattergories in English and French.', emoji:'🛑', color:'#fb7185', path:'stop.html',  enabled:true, sort_order:10 },
+    { id:'ttl',   title:'Two Truths and a Lie', description:'Write two truths and one lie; the group guesses the lie.', emoji:'🤥', color:'#38bdf8', path:'ttl.html',   enabled:true, sort_order:20 },
+    { id:'emoji', title:'Emoji Guess', description:'Guess the country or the movie from the emojis.', emoji:'🧩', color:'#4ade80', path:'emoji.html', enabled:true, sort_order:30 },
+    { id:'taboo', title:'Forbidden Words', description:'Describe advanced verbs and objects without using the restricted words.', emoji:'🚫', color:'#f97316', path:'taboo.html', enabled:true, sort_order:40 }
   ];
   var games = CATALOG.slice();
+  window.hubGames = function () { return games; };
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
 
   function render() {
@@ -81,15 +122,15 @@
       var c = 'c' + (i % 3);
       var inner = '<span class="emoji">' + esc(g.emoji) + '</span><h2>' + esc(g.title) + '</h2><p>' + esc(g.description) + '</p>';
       return g.enabled
-        ? '<a class="card ' + c + '" href="' + esc(g.path) + q + '">' + inner + '<span class="go">Jugar</span></a>'
-        : '<div class="card soon ' + c + '">' + inner + '<span class="go">Próximamente</span></div>';
+        ? '<a class="card ' + c + '" href="' + esc(g.path) + q + '">' + inner + '<span class="go">Play</span></a>'
+        : '<div class="card soon ' + c + '">' + inner + '<span class="go">Coming soon</span></div>';
     }).join('');
   }
   document.getElementById('room').addEventListener('input', render);
   render();
 
   if (location.protocol === 'file:') {
-    document.getElementById('warn').innerHTML = '<p class="warn">Abriste el archivo directamente desde tu computador. El menú funciona, pero los juegos necesitan un servidor: ábrelo desde GitHub Pages o con <code>python -m http.server</code> dentro de esta carpeta.</p>';
+    document.getElementById('warn').innerHTML = '<p class="warn">You opened the file directly from your computer. The menu works, but the games need a server: open it from GitHub Pages or with <code>python -m http.server</code> inside this folder.</p>';
   }
 </script>
 <script type="module">
@@ -108,13 +149,74 @@
     if (res.data && res.data.length) {
       games = res.data;
       render();
-      status.textContent = '● Conectado a la base de datos';
+      status.textContent = '● Connected to the database';
     } else {
-      status.textContent = 'Base de datos vacía: ejecuta setup_database.sql';
+      status.textContent = 'Empty database: run setup_database.sql';
     }
   } catch (e) {
     console.warn('Hub database unavailable:', e);
-    status.textContent = '○ Sin base de datos (' + (e && e.message ? e.message : 'error') + '). Usando lista local.';
+    status.textContent = '○ No database (' + (e && e.message ? e.message : 'error') + '). Using the local list.';
+  }
+
+  // 3) Class scoreboard: adds up the points every game saved in hub_scores.
+  var sbTable = document.getElementById('sb-table');
+  var escH = function (s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  var CLASS_CODE = 'CLASS';
+  var sb = null, rows = [];
+  try { sb = (await import('./supabase.js')).supabase; } catch (e) { sbTable.innerHTML = '<tbody><tr><td style="text-align:left">Scoreboard needs the database (supabase.js).</td></tr></tbody>'; }
+
+  function gameCols() {
+    var list = window.hubGames().map(function (g) { return { id: g.id, title: g.title, emoji: g.emoji }; });
+    rows.forEach(function (r) { Object.keys(r.by).forEach(function (id) { if (!list.some(function (g) { return g.id === id; })) list.push({ id: id, title: id, emoji: '' }); }); });
+    return list;
+  }
+  function tableHtml(withGames) {
+    if (!rows.length) return '<tbody><tr><td style="text-align:left;color:var(--muted)">No points yet. Play a game and its points will appear here.</td></tr></tbody>';
+    var cols = withGames ? gameCols() : [];
+    return '<thead><tr><th>#</th><th>Student</th>' + cols.map(function (g) { return '<th title="' + escH(g.title) + '">' + escH(g.emoji || '') + ' ' + escH(g.title) + '</th>'; }).join('') + '<th>Total</th></tr></thead><tbody>' +
+      rows.map(function (r, i) {
+        return '<tr class="' + (i < 3 ? 'top' : '') + '"><td>' + (['🥇','🥈','🥉'][i] || (i + 1)) + '</td><td>' + escH(r.avatar || '') + ' ' + escH(r.name) + '</td>' +
+          cols.map(function (g) { return '<td>' + (r.by[g.id] || 0) + '</td>'; }).join('') + '<td class="tot">' + r.total + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
+  async function loadScores() {
+    if (!sb) return;
+    var res = await sb.from('hub_scores').select('*').eq('class_code', CLASS_CODE);
+    if (res.error) { sbTable.innerHTML = '<tbody><tr><td style="text-align:left">Scoreboard not ready: run setup_database.sql in Supabase. (' + escH(res.error.message) + ')</td></tr></tbody>'; return; }
+    var map = {};
+    (res.data || []).forEach(function (x) {
+      var r = map[x.session_id] || (map[x.session_id] = { name: x.name, avatar: x.avatar, total: 0, by: {}, t: '' });
+      r.total += x.points; r.by[x.game] = (r.by[x.game] || 0) + x.points;
+      if (String(x.updated_at) > r.t) { r.t = String(x.updated_at); r.name = x.name; if (x.avatar) r.avatar = x.avatar; }
+    });
+    rows = Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.total - a.total || a.name.localeCompare(b.name); });
+    sbTable.innerHTML = tableHtml(true);
+    if (document.getElementById('final').classList.contains('on')) showFinal();
+  }
+  function showFinal() {
+    var t = rows.slice(0, 3), order = [1, 0, 2], cls = ['p1', 'p2', 'p3'], med = ['🥇', '🥈', '🥉'];
+    document.getElementById('final-pod').innerHTML = order.map(function (i) {
+      var r = t[i];
+      return r ? '<div class="' + cls[i] + '"><span class="med">' + med[i] + '</span><span class="nm">' + escH(r.avatar || '') + ' ' + escH(r.name) + '</span>' + r.total + ' pts</div>' : '<div style="visibility:hidden"></div>';
+    }).join('');
+    document.getElementById('final-table').innerHTML = tableHtml(false);
+    document.getElementById('final').classList.add('on');
+    document.getElementById('final-close').focus();
+  }
+  document.getElementById('sb-refresh').addEventListener('click', loadScores);
+  document.getElementById('sb-final').addEventListener('click', async function () { await loadScores(); showFinal(); });
+  document.getElementById('final-close').addEventListener('click', function () { document.getElementById('final').classList.remove('on'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') document.getElementById('final').classList.remove('on'); });
+  document.getElementById('sb-reset').addEventListener('click', async function () {
+    if (!sb || !confirm('Start a new class? This deletes ALL class scoreboard totals (game rooms are not touched).')) return;
+    var res = await sb.from('hub_scores').delete().eq('class_code', CLASS_CODE);
+    if (res.error) alert('Could not reset: ' + res.error.message);
+    loadScores();
+  });
+  if (sb) {
+    await loadScores();
+    try { sb.channel('hub-scores').on('postgres_changes', { event: '*', schema: 'public', table: 'hub_scores' }, loadScores).subscribe(); } catch (e) {}
+    setInterval(loadScores, 8000);
   }
 </script>
 </body>
