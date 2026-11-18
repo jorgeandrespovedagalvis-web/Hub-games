@@ -96,6 +96,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
 import { supabase, ensureRoom, joinRoom, subscribeRoom, patchRoom, roomCodeFromUrl } from "./supabase.js";
+import { getSid, savedName, savedAvatar, rememberPlayer, recordScores, newRoundId } from "./scoreboard.js";
 
 const CODE = roomCodeFromUrl("TABOO-1001");
 const AV = ["🦊","🐼","🐸","🦄","🐙","🦁","🐯","🐵","🐧","🦉","🐢","🐳","🦋","🐝","🦖","👾"];
@@ -181,10 +182,11 @@ const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let sid; try { sid = localStorage.getItem('taboo_sid'); if (!sid) { sid = crypto.randomUUID(); localStorage.setItem('taboo_sid', sid); } } catch { sid = crypto.randomUUID(); }
+const sid = getSid(); // same id in every game -> shared class scoreboard
 let hostMode = false;
 try { hostMode = localStorage.getItem('taboo_host_' + CODE) === '1' || new URLSearchParams(location.search).get('host') === '1'; } catch {}
-let S = { room: null, players: [] }, me = null, skew = 0, lastKey = '', pickedAv = AV[0], cat = 'verbs';
+let S = { room: null, players: [] }, me = null, skew = 0, lastKey = '', pickedAv = AV.includes(savedAvatar()) ? savedAvatar() : AV[0], cat = 'verbs';
+let showKey = false; // host screen never shows the words unless the teacher asks, after the round
 
 function showError(e) {
   const t = $('#err'); if (!e) { t.style.display = 'none'; return; }
@@ -216,7 +218,7 @@ const myHand = () => (me && st().hands && st().hands[me.id]) || [];
 function viewKey() {
   if (!S.room) return 'none';
   const sc = S.players.map(p => p.id + ':' + p.score).join(',') + '|' + JSON.stringify(st().grades || {});
-  return [S.room.status, hostMode, me && me.id, st().ends_at, sc].join('|');
+  return [S.room.status, hostMode, me && me.id, st().ends_at, sc, showKey].join('|');
 }
 
 function render() {
@@ -256,7 +258,7 @@ function view() {
 
 function joinView() {
   return `<div class="box"><h2>Join room <code>${esc(CODE)}</code></h2>
-    <label for="nm"><b>Your name</b></label><input id="nm" type="text" maxlength="30" autocomplete="off">
+    <label for="nm"><b>Your name</b></label><input id="nm" type="text" maxlength="30" autocomplete="off" value="${esc(savedName())}">
     <p><b>Your avatar</b></p><div class="avs">${AV.map(a => `<button type="button" class="av ${a === pickedAv ? 'on' : ''}" data-av="${a}" aria-label="Avatar ${a}">${a}</button>`).join('')}</div>
     <button class="main" data-act="join">Join</button></div>
     <p><button class="ghost" data-act="host">I'm the host (projector)</button></p>`;
@@ -288,7 +290,7 @@ function chartHtml() {
 }
 
 // Host clicks directly on any student's card to cycle: Unmarked -> ✓ Check (+100) -> ✕ Cross (0) -> Unmarked
-function hostCardsGridHtml() {
+function hostCardsGridHtml(reveal = false) {
   const grades = st().grades || {};
   return S.players.map(p => {
     const hand = (st().hands && st().hands[p.id]) || [];
@@ -298,7 +300,7 @@ function hostCardsGridHtml() {
         <h2 style="margin:0">${pTag(p)}</h2>
         <span class="chip">${p.score} pts</span>
       </div>
-      <div class="host-grid">${hand.map(cid => {
+      <div class="host-grid">${hand.map((cid, i) => {
         const card = CARDS[cid];
         if (!card) return '';
         const key = `${p.id}:${cid}`;
@@ -308,12 +310,19 @@ function hostCardsGridHtml() {
           : status === 'invalid'
           ? '<div class="stamp no" aria-label="Wrong">✕</div>'
           : '';
-        return `<button type="button" class="hcard state-${status}" data-toggle-card="${key}" title="Click to toggle ✓ Check (+100 pts) or ✕ Cross (0 pts)">
-          <div class="hcard-head">${esc(card.word)}</div>
+        const face = reveal
+          ? `<div class="hcard-head">${esc(card.word)}</div>
           <div class="hcard-body">
             <p class="hcard-lbl">Forbidden:</p>
             <ul class="hcard-ban">${card.ban.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
-          </div>
+          </div>`
+          : `<div class="hcard-head">🔒 Card ${i + 1}</div>
+          <div class="hcard-body">
+            <p class="hcard-lbl">Hidden on this screen</p>
+            <p class="hcard-ban" style="margin:0">Tap: ✓ → ✕ → clear</p>
+          </div>`;
+        return `<button type="button" class="hcard state-${status}" data-toggle-card="${key}" title="Click to toggle ✓ Check (+100 pts) or ✕ Cross (0 pts)" aria-label="${esc(p.name)} card ${i + 1}: ${status === 'valid' ? 'correct' : status === 'invalid' ? 'wrong' : 'not graded'}">
+          ${face}
           ${stamp}
         </button>`;
       }).join('')}</div>
@@ -334,7 +343,7 @@ function hostView(s) {
       <div class="row"><label for="cnt"><b>Cards / person</b></label><input id="cnt" type="number" min="1" max="${maxPerPlayer}" value="${Math.min(2, maxPerPlayer)}">
       <label for="secs"><b>Seconds</b></label><input id="secs" type="number" min="30" max="1800" value="180"></div>
       <div class="row"><button class="main" id="startgame" data-act="start" disabled>Start game</button>${clear}</div>
-      <p class="muted">Students explain orally from their seats. Click any card on your screen to mark it ✓ (+100 pts) or ✕ (0 pts).</p></div>`;
+      <p class="muted">Students explain orally from their seats. The words only appear on their phones: your screen shows hidden cards you tap to mark ✓ (+100 pts) or ✕ (0 pts).</p></div>`;
   }
   if (s === 'playing') return `<div class="box">
     <div class="row" style="justify-content:space-between;margin:0">
@@ -350,8 +359,9 @@ function hostView(s) {
   ${hostCardsGridHtml()}`;
   if (s === 'podium') return `<div class="box"><h2>🏆 Results</h2>${rankHtml()}</div>
     ${chartHtml()}
-    <h2>📋 Cards Graded (Click any card to adjust)</h2>
-    ${hostCardsGridHtml()}
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">📋 Cards Graded (Click any card to adjust)</h2>
+    <button class="ghost" data-act="togglekey">${showKey ? '🙈 Hide words' : '👁 Show words'}</button></div>
+    ${hostCardsGridHtml(showKey)}
     <div class="row"><button class="main" data-act="reset">New game</button>${clear}</div>`;
   return '<p class="muted">Waiting…</p>';
 }
@@ -410,17 +420,20 @@ async function recalculateScores(grades) {
   const updates = S.players.map(p => {
     const hand = (st().hands && st().hands[p.id]) || [];
     const pts = hand.reduce((sum, cid) => sum + (grades[`${p.id}:${cid}`] === 'valid' ? 100 : 0), 0);
-    return supabase.from('hub_players').update({ score: pts }).eq('id', p.id);
+    return { p, pts, req: supabase.from('hub_players').update({ score: pts }).eq('id', p.id) };
   });
-  await Promise.all(updates);
+  await Promise.all(updates.map(u => u.req));
+  await recordScores('taboo', st().round_id || st().ends_at, updates.map(u => ({ ...u.p, score: u.pts })));
 }
 
 const actions = {
   host() { try { localStorage.setItem('taboo_host_' + CODE, '1'); } catch {} hostMode = true; lastKey = ''; render(); },
+  togglekey() { showKey = !showKey; render(); },
   async join() {
     const name = $('#nm').value.trim(); if (!name) { $('#nm').focus(); return; }
     const { error } = await joinRoom(CODE, sid, name, { avatar: pickedAv, status: 'joined' });
     if (error) return showError(error);
+    rememberPlayer(name, pickedAv);
     refresh();
   },
   async start() {
@@ -442,7 +455,7 @@ const actions = {
       p_code: CODE,
       p_status: 'playing',
       p_secs: secs,
-      p_reset: { category: cat, hands, perPlayer, grades: {}, scored: false }
+      p_reset: { category: cat, hands, perPlayer, grades: {}, scored: false, round_id: newRoundId() }
     });
     if (error) showError(error);
     refresh();
@@ -461,8 +474,9 @@ const actions = {
     refresh();
   },
   async reset() {
-    if (!confirm('Reset the whole game? All scores will be cleared and everyone goes back to the lobby.')) return;
+    if (!confirm('Reset the whole game? All scores of this game will be cleared and everyone goes back to the lobby. (Class scoreboard totals are kept.)')) return;
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
+    showKey = false;
     await patchRoom(CODE, { status: 'lobby', scored: false, hands: {}, grades: {}, ends_at: null });
     refresh();
   }
