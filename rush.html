@@ -85,13 +85,19 @@
   .res .lt { background:#fff; color:#111; font-weight:800; border-radius:50%; width:1.7em; height:1.7em; display:inline-flex; align-items:center; justify-content:center; }
   .res .wd { flex:1; min-width:6em; font-weight:800; }
   .fab { position:fixed; right:12px; bottom:12px; z-index:6; background:#000; box-shadow:4px 4px 0 rgba(255,255,255,.18); }
+  .wl { display:flex; flex-wrap:wrap; gap:6px; width:100%; }
+  .w { display:inline-flex; gap:6px; align-items:center; border:2px solid #fff; padding:2px 8px; background:#000; font-weight:500; }
+  .w b { background:#fff; color:#111; border-radius:50%; width:1.5em; height:1.5em; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; }
+  .w i { color:var(--ok); font-style:normal; font-weight:800; }
+  .w.cx { opacity:.6; text-decoration:line-through; } .w.cx i { color:var(--bad); }
+  .res li.col { display:block; } .res li .hd { display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; flex-wrap:wrap; }
   #err { position:fixed; left:0; right:0; bottom:0; background:#fde047; color:#000; padding:10px 16px; font-weight:500; display:none; z-index:9; }
   @media (prefers-reduced-motion: reduce) { .catcard { animation:none; } body { transition:none; } .bar i { transition:none; } }
 </style>
 </head>
 <body>
 <a class="back" href="./">← Games</a>
-<main><h1>Alphabet Rush <small style="font-size:.9rem;font-weight:500">v1</small></h1><div id="app"><p class="muted">Loading…</p></div></main>
+<main><h1>Alphabet Rush <small style="font-size:.9rem;font-weight:500">v2</small></h1><div id="app"><p class="muted">Loading…</p></div></main>
 <div id="err" role="alert"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
@@ -122,6 +128,7 @@ let hostMode = false;
 try { hostMode = localStorage.getItem('rush_host_' + CODE) === '1' || new URLSearchParams(location.search).get('host') === '1'; } catch {}
 let customCats = []; try { customCats = JSON.parse(localStorage.getItem('rush_custom') || '[]'); } catch {}
 const cfg = { rounds: 8, secs: 40, sel: new Set([...CATS.map(c => c[0]), ...customCats]) };
+let pend = [], lateSent = false;
 let S = { room: null, players: [], items: [] }, me = null, skew = 0, lastKey = '', pickedAv = AV[0], picked = null;
 
 function showError(e) {
@@ -154,7 +161,11 @@ const pTag = p => p ? `${esc(p.avatar || '🙂')} ${esc(p.name)}` : '?';
 const remaining = () => { const e = st().ends_at; return e ? Math.max(0, Math.ceil((new Date(e).getTime() - (Date.now() + skew)) / 1000)) : 0; };
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
 const itemsOf = pid => S.items.filter(i => i.player_id === pid);
-const ans = (pid, r) => S.items.find(i => i.player_id === pid && i.data.round === r);
+const wordsOf = (pid, r) => S.items.filter(i => i.player_id === pid && i.data.round === r).sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
+const wkey = w => String(w || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ');
+const myWordKeys = () => { const k = new Set(me ? wordsOf(me.id, rnd()).map(i => wkey(i.data.word)) : []); pend.forEach(e => { if (e.round === rnd()) k.add(e.key); }); return k; };
+const usedNow = () => { const u = new Set(me ? wordsOf(me.id, rnd()).map(i => i.data.letter) : []); pend.forEach(e => { if (e.round === rnd()) u.add(e.letter); }); return u; };
+const validCount = pid => itemsOf(pid).filter(i => !i.data.cancelled).length;
 const bonus = it => {
   const d = it.data; if (!d.ends || !d.secs) return 0;
   const rem = (new Date(d.ends).getTime() - new Date(it.created_at).getTime()) / 1000;
@@ -162,7 +173,6 @@ const bonus = it => {
 };
 const pts = it => it.data.cancelled ? 0 : 100 + bonus(it);
 const total = pid => itemsOf(pid).reduce((a, i) => a + pts(i), 0);
-const usedLetters = () => new Set(me ? itemsOf(me.id).filter(i => i.data.round < rnd()).map(i => i.data.letter) : []);
 
 async function syncScores() {
   const ups = S.players.filter(p => p.score !== total(p.id)).map(p => supabase.from('hub_players').update({ score: total(p.id) }).eq('id', p.id));
@@ -180,26 +190,28 @@ function themeColor() {
 function viewKey() {
   if (!S.room) return 'none';
   const s = S.room.status, r = rnd();
-  const mySub = me ? !!ans(me.id, r) : false;
   const itemSig = S.items.map(i => i.id + (i.data.cancelled ? 1 : 0)).sort().join();
   const playerSig = S.players.map(p => p.id + p.name).join();
   let extra = '';
   if (hostMode) {
-    if (s === 'playing') extra = S.items.filter(i => i.data.round === r).map(i => i.player_id).sort().join() + '|' + playerSig;
+    if (s === 'playing') extra = '';
     else if (s !== 'lobby') extra = itemSig + '|' + playerSig;
   } else if (s === 'review' || s === 'podium') extra = itemSig + '|' + playerSig;
-  return [s, hostMode, me && me.id, r, mySub, st().ends_at, extra].join('#');
+  return [s, hostMode, me && me.id, r, st().ends_at, extra].join('#');
 }
 function render() {
   if (!S.room) { $('#app').innerHTML = '<p class="muted">Could not open the room. Run add_rush_game.sql in Supabase, then reload.</p>'; return; }
   document.body.style.setProperty('--acc', themeColor());
   const k = viewKey();
-  if (k !== lastKey) { lastKey = k; picked = null; $('#app').innerHTML = view(); qr(); selCount(); }
+  if (k !== lastKey) { lastKey = k; picked = null; pend = []; lateSent = false; $('#app').innerHTML = view(); qr(); selCount(); }
   light();
 }
 function light() {
   const pl = $('#plist'); if (pl) pl.innerHTML = playerChips(false) || '<i class="muted">Nobody yet…</i>';
-  const c = $('#count'); if (c) c.textContent = `${S.items.filter(i => i.data.round === rnd()).length}/${S.players.length} sent`;
+  const c = $('#count'); if (c) { const ri = S.items.filter(i => i.data.round === rnd()); c.textContent = `${ri.length} words from ${new Set(ri.map(i => i.player_id)).size}/${S.players.length} players`; }
+  const hl = $('#hplist'); if (hl) hl.innerHTML = playerChips(true, true) || '<i class="muted">Nobody yet…</i>';
+  const mw = $('#mywords'); if (mw) mw.innerHTML = mineHtml();
+  syncKeys();
   const sg = $('#startgame'); if (sg) sg.disabled = S.players.length < 1;
   tick();
 }
@@ -229,21 +241,32 @@ function applyLock() {
   const n = $('#late'); if (n) n.hidden = false;
   validate();
 }
+function problem(w) {
+  if (lateSent) return 'Time is up and you sent your last word.';
+  if (!picked) return 'Pick a letter on the wheel first.';
+  if (usedNow().has(picked)) return `You already used ${picked}. Pick another letter.`;
+  if (!w) return `Type a word that starts with ${picked}.`;
+  if (!/^\p{L}/u.test(w) || firstLetter(w) !== picked) return `It must start with ${picked}.`;
+  if (w.replace(/[^\p{L}]/gu, '').length < 2) return 'Use a real word (2 or more letters).';
+  if (w.length > 2 && /^(\p{L})\1+$/u.test(w.replace(/\s/g, ''))) return 'That is not a real word.';
+  if (myWordKeys().has(wkey(w))) return 'You already added that word.';
+  return '';
+}
 function validate() {
   const inp = $('#word'); if (!inp) return;
-  const w = inp.value.trim(), b = document.querySelector('[data-act=submit]'), h = $('#hint');
-  let ok = false, msg = '';
-  if (!picked) msg = 'Pick a letter on the wheel first.';
-  else if (!w) msg = `Type a word that starts with ${picked}.`;
-  else if (firstLetter(w) !== picked || !/^\p{L}/u.test(w)) msg = `It must start with ${picked}.`;
-  else if (w.replace(/[^\p{L}]/gu, '').length < 2) msg = 'Use a real word (2 or more letters).';
-  else { ok = true; msg = 'Looks good. Send it!'; }
-  inp.classList.toggle('bad', !!w && !ok);
-  if (b) b.disabled = !ok;
-  if (h) h.textContent = msg;
+  const w = inp.value.trim().replace(/\s+/g, ' '), b = document.querySelector('[data-act=submit]'), h = $('#hint');
+  const msg = problem(w);
+  inp.classList.toggle('bad', !!w && !!msg && !!picked);
+  if (b) b.disabled = !!msg;
+  if (h) h.textContent = msg || 'Press Enter or tap Send. You cannot change it after sending.';
+}
+function syncKeys() {
+  const w = $('#wheel'); if (!w) return;
+  const used = usedNow(), locked = w.classList.contains('locked');
+  w.querySelectorAll('.key').forEach(k => { k.disabled = locked || used.has(k.dataset.l); });
 }
 function pickLetter(l) {
-  const w = $('#wheel'); if (!w || w.classList.contains('locked')) return;
+  const w = $('#wheel'); if (!w || w.classList.contains('locked') || usedNow().has(l)) return;
   picked = l;
   document.querySelectorAll('.key').forEach(k => k.classList.toggle('on', k.dataset.l === l));
   $('#pl').textContent = l; $('#hubsub').textContent = 'Word starting with ' + l;
@@ -254,12 +277,12 @@ function pickLetter(l) {
 // ---------- views ----------
 function playerChips(host, marks) {
   return S.players.map(p => {
-    const sent = marks && ans(p.id, rnd());
-    return `<span class="chip">${pTag(p)}${marks !== undefined ? ` · ${total(p.id)} pts${sent ? ' ✓' : ''}` : ''}${host ? ` <button class="x" data-kick="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}</span>`;
+    const nw = marks ? wordsOf(p.id, rnd()).length : 0;
+    return `<span class="chip">${pTag(p)}${marks !== undefined ? ` · ${total(p.id)} pts${marks ? ` · ${nw} words` : ''}` : ''}${host ? ` <button class="x" data-kick="${p.id}" aria-label="Remove ${esc(p.name)}">✕</button>` : ''}</span>`;
   }).join('');
 }
 function hostPlayersBox(withMarks) {
-  return `<div class="box"><h2>Players</h2><div class="chips">${playerChips(true, withMarks) || '<i class="muted">Nobody yet…</i>'}</div></div>`;
+  return `<div class="box"><h2>Players</h2><div class="chips"${withMarks ? ' id="hplist"' : ''}>${playerChips(true, withMarks) || '<i class="muted">Nobody yet…</i>'}</div></div>`;
 }
 function cardHtml(r) {
   const d = deck()[r]; if (!d) return '';
@@ -275,18 +298,30 @@ function rankHtml(host) {
   const rows = S.players.map(p => ({ p, t: total(p.id) })).sort((a, b) => b.t - a.t || a.p.name.localeCompare(b.p.name));
   return rows.map((r, i) => {
     const its = itemsOf(r.p.id), allX = its.length && its.every(x => x.data.cancelled);
-    return `<div class="rank ${me && r.p.id === me.id ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span><span>${pTag(r.p)}</span><span class="s">${r.t} pts</span>${host && its.length ? `<button class="sm" data-cancelall="${r.p.id}">${allX ? 'Restore all' : '🚫 Cancel all'}</button>` : ''}</div>`;
+    return `<div class="rank ${me && r.p.id === me.id ? 'me' : ''}"><span>${['🥇', '🥈', '🥉'][i] || (i + 1) + '.'}</span><span>${pTag(r.p)}</span><span class="s">${r.t} pts · ${validCount(r.p.id)} words</span>${host && its.length ? `<button class="sm" data-cancelall="${r.p.id}">${allX ? 'Restore all' : '🚫 Cancel all'}</button>` : ''}</div>`;
   }).join('') || '<p class="muted">No players.</p>';
+}
+function wordChip(it, buttons) {
+  const x = it.data.cancelled, lbl = (x ? 'Restore ' : 'Cancel ') + it.data.word;
+  return `<span class="w ${x ? 'cx' : ''}"><b>${esc(it.data.letter)}</b> ${esc(it.data.word)} <i>${x ? '0' : '+' + pts(it)}</i>${buttons ? ` <button class="sm" data-cancel="${it.id}" title="${esc(lbl)}" aria-label="${esc(lbl)}">${x ? '↺' : '✕'}</button>` : ''}</span>`;
 }
 function reviewHtml(r, buttons) {
   const d = deck()[r]; if (!d) return '';
-  const rows = S.players.map(p => {
-    const it = ans(p.id, r);
-    if (!it) return `<li class="none"><span>${pTag(p)}</span><span class="wd">No answer</span></li>`;
-    const x = it.data.cancelled;
-    return `<li class="${x ? 'cx' : ''}"><span>${pTag(p)}</span><span class="lt">${esc(it.data.letter)}</span><span class="wd">${esc(it.data.word)}</span><b>${pts(it)} pts</b>${buttons ? `<button class="sm" data-cancel="${it.id}">${x ? 'Restore' : 'Cancel'}</button>` : ''}</li>`;
+  const rows = [...S.players].sort((a, b) => wordsOf(b.id, r).length - wordsOf(a.id, r).length).map(p => {
+    const ws = wordsOf(p.id, r);
+    if (!ws.length) return `<li class="none"><span>${pTag(p)}</span><span class="wd">No words</span></li>`;
+    const t = ws.reduce((a, i) => a + pts(i), 0);
+    return `<li class="col"><div class="hd"><span>${pTag(p)}</span><b>${ws.filter(i => !i.data.cancelled).length} words · ${t} pts</b></div><div class="wl">${ws.map(i => wordChip(i, buttons)).join('')}</div></li>`;
   }).join('');
   return `<div class="box"><h2>${esc(d.i)} ${esc(d.c)} <span class="muted">· round ${r + 1}</span></h2><ul class="res">${rows || '<li class="none">No players.</li>'}</ul></div>`;
+}
+function mineHtml() {
+  if (!me) return '';
+  const r = rnd(), srv = wordsOf(me.id, r), keys = new Set(srv.map(i => wkey(i.data.word)));
+  const wait = pend.filter(e => e.round === r && !keys.has(e.key)).map(e => `<span class="w"><b>${esc(e.letter)}</b> ${esc(e.word)} <i>…</i></span>`).reverse();
+  const done = srv.slice().reverse().map(i => wordChip(i, false));
+  const tot = srv.reduce((a, i) => a + pts(i), 0);
+  return `<h2>Your words: ${wait.length + done.length} · ${tot} pts</h2><div class="wl">${[...wait, ...done].join('') || '<span class="muted">Your words will appear here.</span>'}</div>`;
 }
 function view() {
   const s = S.room.status;
@@ -335,26 +370,23 @@ function hostView(s) {
 function playerView(s) {
   const hello = `<p class="muted">Playing as ${pTag(me)}</p>`, r = rnd();
   if (s === 'lobby') return `${hello}<div class="box"><h2>You're in 🎉</h2><p>Wait for the game to start.</p><div class="chips" id="plist"></div></div>`;
-  if (s === 'playing') {
-    const mine = ans(me.id, r);
-    if (mine) return `${hello}<div class="play"><div>${cardHtml(r)}</div><div class="box"><h2>Sent ✓</h2><p>Your word: <b>${esc(mine.data.word)}</b> (${esc(mine.data.letter)})</p><p class="muted">Wait for the host to end the round.</p><div class="timer" id="timer"></div></div></div>`;
-    return `${hello}<div class="play"><div>${cardHtml(r)}</div><div>
+  if (s === 'playing') return `${hello}<div class="play"><div>${cardHtml(r)}</div><div>
       <div class="timer" id="timer"></div><div class="bar"><i id="barfill"></i></div>
-      <p id="late" class="big" hidden>⏰ Time's up. You can't change your word, but you can send what you have.</p>
-      ${wheelHtml(usedLetters())}
+      <p id="late" class="big" hidden>⏰ Time's up. You can't type any more, but you can send the word on your screen.</p>
+      <p class="muted">Pick a letter, type one word and send it. Then pick another letter. A sent word can't be changed.</p>
+      ${wheelHtml(usedNow())}
       <input id="word" class="word" type="text" maxlength="40" disabled placeholder="Pick a letter first" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Your word">
       <p id="hint" class="muted" role="status"></p>
-      <button class="main" data-act="submit" disabled>Send</button></div></div>`;
-  }
+      <button class="main" data-act="submit" disabled>Send word</button>
+      <div class="box" id="mywords">${mineHtml()}</div></div></div>`;
   if (s === 'review') {
-    const it = ans(me.id, r), d = deck()[r];
-    const mine = !it ? '<p>You did not send a word this round.</p>'
-      : it.data.cancelled ? `<p>Your word <b>${esc(it.data.word)}</b> was cancelled by the host. 0 pts.</p>`
-      : `<p>Your word <b>${esc(it.data.word)}</b> (${esc(it.data.letter)}): <b>+${pts(it)} pts</b></p>`;
+    const ws = wordsOf(me.id, r), d = deck()[r], tot = ws.reduce((a, i) => a + pts(i), 0);
+    const mine = !ws.length ? '<p>You did not add any word this round.</p>'
+      : `<p><b>${ws.filter(i => !i.data.cancelled).length}</b> valid words · <b>${tot} pts</b></p><div class="wl">${ws.map(i => wordChip(i, false)).join('')}</div>`;
     return `${hello}<div class="box"><h2>${d ? esc(d.i) + ' ' + esc(d.c) : ''}</h2>${mine}<p class="muted">Wait for the next round.</p></div><div class="box"><h2>Scores</h2>${rankHtml(false)}</div>`;
   }
   if (s === 'podium') {
-    const lines = deck().map((d, i) => { const it = ans(me.id, i); return `<li class="${!it ? 'none' : it.data.cancelled ? 'cx' : ''}"><span>${esc(d.i)} ${esc(d.c)}</span>${it ? `<span class="lt">${esc(it.data.letter)}</span><span class="wd">${esc(it.data.word)}</span><b>${pts(it)} pts</b>` : '<span class="wd">No answer</span>'}</li>`; }).join('');
+    const lines = deck().map((d, i) => { const ws = wordsOf(me.id, i); return `<li class="${ws.length ? 'col' : 'none'}"><div class="hd"><span>${esc(d.i)} ${esc(d.c)}</span></div>${ws.length ? `<div class="wl">${ws.map(x => wordChip(x, false)).join('')}</div>` : '<span class="wd">No words</span>'}</li>`; }).join('');
     return `${hello}<div class="box"><h2>🏆 Podium</h2>${rankHtml(false)}</div><div class="box"><h2>Your words</h2><ul class="res">${lines}</ul></div>`;
   }
   return `${hello}<p class="muted">Waiting…</p>`;
@@ -390,14 +422,20 @@ const actions = {
   },
   async submit() {
     if (S.room.status !== 'playing') return showError({ message: 'The round has ended.' });
-    validate();
-    const word = ($('#word').value || '').trim();
-    if (!picked || !word || firstLetter(word) !== picked) return showError({ message: 'The word must start with the letter you picked.' });
-    const r = rnd();
-    const old = S.items.filter(i => i.player_id === me.id && i.data.round === r).map(i => i.id);
-    if (old.length) await supabase.from('hub_items').delete().in('id', old);
-    const { error } = await supabase.from('hub_items').insert([{ room_code: CODE, player_id: me.id, kind: 'answer', data: { round: r, letter: picked, word, ends: st().ends_at, secs: st().secs } }]);
-    if (error) showError(error); refresh();
+    const inp = $('#word'); if (!inp) return;
+    const word = inp.value.trim().replace(/\s+/g, ' ');
+    if (problem(word)) { validate(); return; }
+    const r = rnd(), locked = $('#wheel').classList.contains('locked');
+    const entry = { round: r, letter: picked, word, key: wkey(word) };
+    pend.push(entry); if (locked) lateSent = true;
+    picked = null; inp.value = ''; inp.disabled = true; inp.placeholder = locked ? 'Time is up' : 'Pick another letter';
+    document.querySelectorAll('.key').forEach(k => k.classList.remove('on'));
+    $('#pl').textContent = '?'; $('#hubsub').textContent = locked ? 'Time is up' : 'Pick another letter';
+    syncKeys(); validate(); $('#mywords').innerHTML = mineHtml();
+    const { error } = await supabase.from('hub_items').insert([{ room_code: CODE, player_id: me.id, kind: 'answer', data: { round: r, letter: entry.letter, word, ends: st().ends_at, secs: st().secs } }]);
+    if (error) showError(error);
+    await refresh(); pend = pend.filter(e => e !== entry);
+    const mw = $('#mywords'); if (mw) mw.innerHTML = mineHtml();
   },
   async endround() { await patchRoom(CODE, { status: 'review' }); await refresh(); await syncScores(); },
   async nextround() {
@@ -438,6 +476,9 @@ document.addEventListener('input', e => {
   if (e.target.id === 'rounds') cfg.rounds = parseInt(e.target.value, 10) || cfg.rounds;
   if (e.target.id === 'secs') cfg.secs = parseInt(e.target.value, 10) || cfg.secs;
 });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id === 'word') { e.preventDefault(); const b = document.querySelector('[data-act=submit]'); if (b && !b.disabled) actions.submit(); }
+});
 document.addEventListener('click', async e => {
   let el;
   if ((el = e.target.closest('[data-av]'))) { pickedAv = el.dataset.av; document.querySelectorAll('.av').forEach(b => b.classList.toggle('on', b === el)); return; }
@@ -446,6 +487,7 @@ document.addEventListener('click', async e => {
   if ((el = e.target.closest('[data-kick]'))) { el.disabled = true; const { error } = await supabase.from('hub_players').delete().eq('id', el.dataset.kick); if (error) showError(error); refresh(); return; }
   if ((el = e.target.closest('[data-cancel]'))) { el.disabled = true; await toggleCancel(el.dataset.cancel); return; }
   if ((el = e.target.closest('[data-cancelall]'))) { el.disabled = true; await cancelAll(el.dataset.cancelall); return; }
+  if ((el = e.target.closest('[data-act=submit]'))) { actions.submit(); return; }
   if ((el = e.target.closest('[data-act]'))) { const a = actions[el.dataset.act]; if (!a) return; el.disabled = true; try { await a(); } finally { el.disabled = false; } }
 });
 // ---------- start ----------
