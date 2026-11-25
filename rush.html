@@ -97,7 +97,7 @@
 </head>
 <body>
 <a class="back" href="./">← Games</a>
-<main><h1>Alphabet Rush <small style="font-size:.9rem;font-weight:500">v2</small></h1><div id="app"><p class="muted">Loading…</p></div></main>
+<main><h1>Alphabet Rush <small style="font-size:.9rem;font-weight:500">v3</small></h1><div id="app"><p class="muted">Loading…</p></div></main>
 <div id="err" role="alert"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module">
@@ -176,8 +176,30 @@ const total = pid => itemsOf(pid).reduce((a, i) => a + pts(i), 0);
 
 async function syncScores() {
   const ups = S.players.filter(p => p.score !== total(p.id)).map(p => supabase.from('hub_players').update({ score: total(p.id) }).eq('id', p.id));
-  if (!ups.length) return;
-  const res = await Promise.all(ups); const bad = res.find(r => r.error); if (bad) showError(bad.error);
+  if (ups.length) { const res = await Promise.all(ups); const bad = res.find(r => r.error); if (bad) showError(bad.error); }
+  await pushClassScores();
+}
+// Class scoreboard (hub_scores): only used when that table exists (second hub). Silently skipped otherwise.
+const CLASS_CODE = 'CLASS';
+let scoresOff = false;
+const tableMissing = e => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|schema cache|Could not find the table/i.test(e.message || ''));
+async function pushClassScores() {
+  if (scoresOff || !hostMode || !S.players.length) return;
+  const now = new Date().toISOString();
+  const res = await Promise.all(S.players.map(async p => {
+    const row = { name: p.name, avatar: p.avatar || '', points: total(p.id), updated_at: now };
+    const rid = 'rush-' + CODE; // hub_scores needs a round_id: one row per player per Rush room
+    const u = await supabase.from('hub_scores').update(row).eq('class_code', CLASS_CODE).eq('game', 'rush').eq('round_id', rid).eq('session_id', p.session_id).select();
+    if (u.error || (u.data && u.data.length)) return u;
+    return supabase.from('hub_scores').insert([{ class_code: CLASS_CODE, game: 'rush', round_id: rid, session_id: p.session_id, ...row }]);
+  }));
+  const bad = res.find(r => r.error);
+  if (bad) { if (tableMissing(bad.error)) scoresOff = true; else showError(bad.error); }
+}
+async function dropClassScores(sessionIds) {
+  if (scoresOff || !sessionIds.length) return;
+  const r = await supabase.from('hub_scores').delete().eq('class_code', CLASS_CODE).eq('game', 'rush').in('session_id', sessionIds);
+  if (r.error && tableMissing(r.error)) scoresOff = true;
 }
 
 // ---------- rendering ----------
@@ -415,6 +437,7 @@ const actions = {
     const secs = clamp(parseInt($('#secs').value, 10) || 40, 10, 180);
     cfg.rounds = rounds; cfg.secs = secs;
     const dk = shuffle(all).slice(0, rounds).map((c, i) => ({ c: c[0], i: c[1], k: i % PAL.length }));
+    await dropClassScores(S.players.map(p => p.session_id));
     await supabase.from('hub_items').delete().eq('room_code', CODE);
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
     const { error } = await supabase.rpc('hub_start_phase', { p_code: CODE, p_status: 'playing', p_secs: secs, p_reset: { deck: dk, round: 0, secs } });
@@ -446,12 +469,14 @@ const actions = {
   async finish() { await patchRoom(CODE, { status: 'podium' }); await refresh(); await syncScores(); },
   async clearnames() {
     if (!confirm('Remove all players (and their answers) and return to the lobby?')) return;
+    await dropClassScores(S.players.map(p => p.session_id));
     const { error } = await supabase.from('hub_players').delete().eq('room_code', CODE);
     if (error) return showError(error);
     await patchRoom(CODE, { status: 'lobby', deck: [], round: 0, ends_at: null }); refresh();
   },
   async reset() {
     if (!confirm('Reset the whole game? All answers and scores will be deleted and everyone goes back to the lobby. Players stay in the room.')) return;
+    await dropClassScores(S.players.map(p => p.session_id));
     await supabase.from('hub_items').delete().eq('room_code', CODE);
     await supabase.from('hub_players').update({ score: 0 }).eq('room_code', CODE);
     await patchRoom(CODE, { status: 'lobby', deck: [], round: 0, ends_at: null }); refresh();
@@ -484,7 +509,7 @@ document.addEventListener('click', async e => {
   if ((el = e.target.closest('[data-av]'))) { pickedAv = el.dataset.av; document.querySelectorAll('.av').forEach(b => b.classList.toggle('on', b === el)); return; }
   if ((el = e.target.closest('[data-l]'))) { pickLetter(el.dataset.l); return; }
   if ((el = e.target.closest('[data-cc]'))) { const n = el.dataset.cc; if (cfg.sel.has(n)) cfg.sel.delete(n); else cfg.sel.add(n); el.classList.toggle('on', cfg.sel.has(n)); selCount(); return; }
-  if ((el = e.target.closest('[data-kick]'))) { el.disabled = true; const { error } = await supabase.from('hub_players').delete().eq('id', el.dataset.kick); if (error) showError(error); refresh(); return; }
+  if ((el = e.target.closest('[data-kick]'))) { el.disabled = true; const gone = byId(el.dataset.kick); if (gone) await dropClassScores([gone.session_id]); const { error } = await supabase.from('hub_players').delete().eq('id', el.dataset.kick); if (error) showError(error); refresh(); return; }
   if ((el = e.target.closest('[data-cancel]'))) { el.disabled = true; await toggleCancel(el.dataset.cancel); return; }
   if ((el = e.target.closest('[data-cancelall]'))) { el.disabled = true; await cancelAll(el.dataset.cancelall); return; }
   if ((el = e.target.closest('[data-act=submit]'))) { actions.submit(); return; }
