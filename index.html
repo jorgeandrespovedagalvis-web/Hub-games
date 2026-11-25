@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;800&display=swap" rel="stylesheet">
 <style>
-  /* Paleta: cambia solo estas líneas para recolorear toda la página */
+  /* Palette: change only these lines to recolor the whole page */
   :root { --bg:#000000; --fg:#ffffff; --red:#d42a1a; --red-l:#ff6b5b; --gray:#5b6063; --dark:#1c1c1c; --shadow:#3a3d3f; --muted:#b8bcbf; color-scheme: dark; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font-family:'Bricolage Grotesque',system-ui,sans-serif; line-height:1.4; }
@@ -110,7 +110,7 @@
     { id:'ttl',   title:'Two Truths and a Lie', description:'Write two truths and one lie; the group guesses the lie.', emoji:'🤥', color:'#38bdf8', path:'ttl.html',   enabled:true, sort_order:20 },
     { id:'emoji', title:'Emoji Guess', description:'Guess the country or the movie from the emojis.', emoji:'🧩', color:'#4ade80', path:'emoji.html', enabled:true, sort_order:30 },
     { id:'taboo', title:'Forbidden Words', description:'Describe advanced verbs and objects without using the restricted words.', emoji:'🚫', color:'#f97316', path:'taboo.html', enabled:true, sort_order:40 },
-    { id:'rush', title:'Alphabet Rush', description:'Saca una tarjeta de categoría, elige una letra y responde rápido con una palabra que empiece con ella.', emoji:'⚡', color:'#d42a1a', path:'rush.html', enabled:true, sort_order:30 }
+    { id:'rush', title:'Alphabet Rush', description:'Draw a category card, pick a letter and send as many words as you can before time runs out.', emoji:'⚡', color:'#d42a1a', path:'rush.html', enabled:true, sort_order:50 }
   ];
   var games = CATALOG.slice();
   window.hubGames = function () { return games; };
@@ -186,7 +186,8 @@
     if (res.error) { sbTable.innerHTML = '<tbody><tr><td style="text-align:left">Scoreboard not ready: run setup_database.sql in Supabase. (' + escH(res.error.message) + ')</td></tr></tbody>'; return; }
     var map = {};
     (res.data || []).forEach(function (x) {
-      var r = map[x.session_id] || (map[x.session_id] = { name: x.name, avatar: x.avatar, total: 0, by: {}, t: '' });
+      var key = String(x.name || x.session_id).trim().toLowerCase();
+      var r = map[key] || (map[key] = { name: x.name, avatar: x.avatar, total: 0, by: {}, t: '' });
       r.total += x.points; r.by[x.game] = (r.by[x.game] || 0) + x.points;
       if (String(x.updated_at) > r.t) { r.t = String(x.updated_at); r.name = x.name; if (x.avatar) r.avatar = x.avatar; }
     });
